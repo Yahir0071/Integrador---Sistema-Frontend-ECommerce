@@ -1,105 +1,125 @@
-# SGCIVORP — Tienda Web E-Commerce (Frontend)
+# SGCIVORP — Plataforma Web de Comercio Electrónico (Frontend)
 
-Plataforma de comercio electrónico para clientes de **SGCIVORP (Bodega & Minimarket)**, desarrollada como parte del **Proyecto Integrador** en la **Universidad Tecnológica del Perú (UTP) - Grupo 06**.
-
-Permite a los clientes explorar el catálogo de productos en tiempo real, armar su carrito de compras, registrarse, solicitar pedidos con reserva temporal de stock y pagar mediante Yape subiendo su comprobante digital para recojo presencial en tienda.
-
----
-
-## 🌟 Características Principales
-
-* 🛒 **Catálogo de Productos Online:**  
-  Navegación por categorías (Lácteos, Abarrotes, Snacks, Limpieza, etc.) con buscador instantáneo, ordenamiento por precio y visualización de stock disponible en tiempo real.
-* 📸 **Fotografías Oficiales en Formato WebP:**  
-  51 imágenes de alta calidad optimizadas para carga ultrarrápida asociadas al código de producto.
-* 🛍️ **Carrito de Compras Reactivo:**  
-  Persistencia local en el navegador, control interactivo de cantidades y validación inmediata de existencias.
-* ⏱️ **Reserva Temporal de Stock (10 minutos):**  
-  Al iniciar el checkout, el sistema aparta automáticamente los productos solicitados para garantizar que ningún otro cliente en tienda física los compre mientras se realiza el pago.
-* 📱 **Pasarela de Pago con Yape:**  
-  Instrucciones claras de abono, número de teléfono de la bodega y subida segura del voucher de pago (PNG/JPEG) con registro del número de operación.
-* 📍 **Ubicación y Horario de Recojo:**  
-  Datos confirmados del local en Ate (La Planicie de la Era, ref. Pista nueva - Santa Clara) con enlace directo a **Google Maps** para facilitar la llegada del cliente.
-* 🎫 **Seguimiento en Vivo con Código QR:**  
-  Pantalla de estado del pedido (*Pendiente de verificación → Pagado → En preparación → Listo para recoger → Entregado*) que genera un código QR y código de recojo (`NV-...`) para validar la entrega en caja.
+**Universidad Tecnológica del Perú (UTP)**  
+**Proyecto Integrador — Grupo 06**
 
 ---
 
-## 🚀 Tecnologías Utilizadas
+## 1. Resumen Ejecutivo
 
-* **Frontend:** HTML5 Semántico, CSS3 moderno con variables y diseño responsive (Desktop y Móvil).
-* **JavaScript:** JavaScript nativo con Módulos ES (`type="module"`), sin frameworks pesados, sin librerías externas por CDN y sin necesidad de procesos de compilación o `node_modules` gigantes.
-* **Servidor Local y Proxy:** Servidor HTTP local en **Node.js (`server.mjs`)** que sirve los archivos estáticos en el puerto `4200` y redirige de forma transparente las peticiones `/api/**` hacia el Backend Spring Boot en el puerto `8080`.
+Este componente constituye la plataforma de comercio electrónico de **SGCIVORP**, orientada a los clientes finales del establecimiento comercial. Su objetivo principal es permitir la exploración del catálogo en tiempo real, la gestión del carrito de compras, el registro de clientes y la emisión de órdenes de compra con reserva de inventario y pago digital para recojo presencial en tienda.
+
+La aplicación está construida siguiendo la arquitectura de Aplicación de Página Única (SPA), sin intermediación de frameworks pesados, garantizando un rendimiento óptimo, bajo consumo de recursos y portabilidad total.
 
 ---
 
-## 🛠️ Cómo Iniciar la Tienda Web
+## 2. Stack Tecnológico
 
-El proyecto está preparado para ejecutarse con **un solo clic** directamente desde tus herramientas de desarrollo:
+* **Presentación y Maquetación:** HTML5 semántico y CSS3 moderno con variables CSS, Grid y Flexbox. Totalmente adaptativo (responsive design) para dispositivos móviles, tabletas y ordenadores de escritorio.
+* **Lógica del Cliente:** JavaScript con Módulos ES nativos (`type="module"`), prescindiendo de dependencias externas por CDN o empaquetadores complejos.
+* **Optimización de Medios:** Fotografías oficiales de productos en formato WebP comprimidas sin pérdida perceptible de calidad, asociadas dinámicamente mediante el código comercial del catálogo.
+* **Servidor Local de Entrega y Proxy:** Entorno en Node.js nativo (`server.mjs`) que expone los recursos estáticos en el puerto local `4200` y actúa como proxy inverso hacia la API del backend en el puerto `8080`, resolviendo políticas de origen cruzado (CORS).
 
-### Opción 1: Desde Visual Studio Code (Recomendado)
-1. Abre la carpeta `Grupo06-Ecommerce` en **Visual Studio Code**.
-2. Presiona la tecla **`F5`** en tu teclado.  
-   *(O ve a la pestaña izquierda de "Ejecutar y depurar" y haz clic en el botón verde ▶ **Iniciar Tienda Web**).*
-3. Se abrirá la terminal integrada de VS Code indicando:
+---
+
+## 3. Requisitos del Entorno
+
+Para ejecutar la plataforma web, el entorno de trabajo debe disponer de:
+
+* **Node.js (versión 18 LTS o superior):** Se utiliza únicamente para el servidor HTTP local integrado (`server.mjs`). No requiere la instalación de librerías mediante `npm install` al no emplear dependencias externas. Verifique su versión con:
+  ```bash
+  node -v
+  ```
+* **Navegador Web Moderno:** Google Chrome, Microsoft Edge, Mozilla Firefox o Safari con soporte para JavaScript ES6+.
+* **Servidor Backend en Ejecución:** La API Spring Boot (`Grupo06`) debe encontrarse operativa en el puerto `8080` para que el catálogo de productos y el flujo de checkout respondan con datos reales.
+
+---
+
+## 4. Guía de Instalación y Puesta en Marcha
+
+Para iniciar la tienda web de forma integrada con el sistema central, proceda con las siguientes indicaciones:
+
+### Prerrequisito Fundamental
+Antes de interactuar con la tienda web, **el servidor backend Spring Boot debe encontrarse en ejecución**. De lo contrario, la interfaz web no podrá obtener el catálogo de productos ni procesar órdenes de compra.
+
+---
+
+### Método 1: Ejecución desde Visual Studio Code (Recomendado)
+El proyecto incluye la configuración preestablecida en `.vscode/launch.json`:
+
+1. Abra la carpeta `Grupo06-Ecommerce` en **Visual Studio Code**.
+2. Presione la tecla **F5** en su teclado.  
+   *(O diríjase al panel lateral de **Ejecutar y depurar** y presione el botón **Iniciar Tienda Web (Puerto 4200)**)*.
+3. Se iniciará el servidor en la terminal integrada mostrando el siguiente mensaje:
    ```text
    La Bodega (Vanilla JS) disponible en http://127.0.0.1:4200
    Proxy /api redirigiendo hacia http://127.0.0.1:8080
    ```
-4. Abre tu navegador en: 👉 **`http://127.0.0.1:4200`**
+4. Acceda desde su navegador web a la dirección:  
+   **http://127.0.0.1:4200**
 
-### Opción 2: Desde IntelliJ IDEA
-1. Abre la carpeta `Grupo06-Ecommerce` en **IntelliJ IDEA**.
-2. Haz **clic derecho** sobre el archivo **`server.mjs`** y selecciona **Run 'server.mjs'**.
-3. Abre tu navegador en: 👉 **`http://127.0.0.1:4200`**
+---
 
-### Opción 3: Por Terminal / Consola
-En una terminal situada en la carpeta del proyecto:
+### Método 2: Ejecución desde IntelliJ IDEA
+1. Abra la carpeta `Grupo06-Ecommerce` en **IntelliJ IDEA**.
+2. Localice el archivo `server.mjs` en el árbol de archivos lateral.
+3. Haga clic derecho sobre `server.mjs` y seleccione la opción **Run 'server.mjs'**.
+4. Acceda desde su navegador web a la dirección:  
+   **http://127.0.0.1:4200**
+
+---
+
+### Método 3: Ejecución mediante Terminal / Línea de Comandos
+Abra una consola de comandos en el directorio raíz de la tienda y ejecute:
 ```bash
 npm start
-# o directamente:
+# O mediante ejecución directa:
 node server.mjs
 ```
 
 ---
 
-## 📁 Estructura del Proyecto
+## 5. Flujo Operativo de la Compra
+
+1. **Navegación del Catálogo:** El cliente visualiza 51 productos con fotografías oficiales, marcas, categorías y precios unitarios.
+2. **Construcción del Carrito:** Selección de cantidades con verificación de existencias y almacenamiento persistente en el navegador.
+3. **Checkout y Reserva Temporal:** Al proceder al pago, el sistema reserva las unidades solicitadas durante **10 minutos**, bloqueando su venta simultánea en la tienda física.
+4. **Carga del Comprobante de Pago:** El cliente realiza la transferencia mediante Yape al número oficial configurado y adjunta la captura del comprobante digital (PNG/JPEG) junto con el número de operación.
+5. **Generación de Código QR y Código de Recojo:** Una vez registrado el pedido, la plataforma genera un identificador único (`NV-...`) y un código QR descargable para que el cliente lo presente en el establecimiento físico al retirar sus productos.
+
+---
+
+## 6. Estructura de Directorios
 
 ```text
 Grupo06-Ecommerce/
-├── index.html                  # Estructura principal y plantilla SPA
-├── package.json                # Configuración de ejecución para Node.js
-├── server.mjs                  # Servidor HTTP local con proxy inverso a :8080
+├── index.html                  # Documento principal y contenedor SPA
+├── package.json                # Definición de scripts de ejecución
+├── server.mjs                  # Servidor HTTP local y proxy inverso a :8080
 ├── .vscode/
-│    └── launch.json            # Configuración de inicio rápido para VS Code (F5)
+│   └── launch.json             # Configuración de depuración para VS Code (F5)
 ├── css/
-│    ├── styles.css             # Paleta de colores, tipografía y variables globales
-│    ├── layout.css             # Estructura de cabecera, barra lateral y pie de página
-│    ├── components.css         # Tarjetas de productos, botones y modales
-│    └── pages.css              # Diseños específicos (catálogo, carrito, checkout)
+│   ├── styles.css              # Variables globales, tipografía y resets
+│   ├── layout.css              # Cabecera, contenedor principal y pie de página
+│   ├── components.css          # Botones, formularios, modales y tarjetas
+│   └── pages.css               # Estilos específicos de cada vista
 ├── js/
-│    ├── app.js                 # Inicialización y ciclo de vida de la aplicación
-│    ├── config.js              # Configuración de la API y constantes
-│    ├── router.js              # Enrutador de vistas SPA sin recarga
-│    ├── core/                  # Estado reactivo (carrito, catálogo, autenticación)
-│    ├── pages/                 # Controladores de pantalla (home, catalog, checkout, etc.)
-│    └── shared/                # Componentes comunes, utilidades y formato de moneda
+│   ├── app.js                  # Punto de entrada y ciclo de vida de la aplicación
+│   ├── config.js               # Parámetros de red y rutas de la API REST
+│   ├── router.js               # Enrutamiento de vistas sin recarga de página
+│   ├── core/                   # Gestión reactiva de estado (catálogo, carrito, auth)
+│   ├── pages/                  # Controladores de página (catálogo, carrito, checkout, órdenes)
+│   └── shared/                 # Componentes compartidos, formateadores y utilidades
 └── assets/
-     ├── productos/             # 51 fotografías oficiales en formato WebP
-     └── figma/                 # Ilustraciones e íconos en formato SVG
+    ├── productos/              # 51 fotografías oficiales en formato WebP
+    └── figma/                  # Gráficos vectoriales e iconografía SVG
 ```
 
 ---
 
-## 🔗 Integración con el Backend
+## 7. Información Académica
 
-Para que la tienda web cargue los productos y procese pedidos, el **Backend Spring Boot (`Grupo06`)** debe estar ejecutándose en el puerto `8080`.  
-Cualquier petición realizada a `/api/**` es interceptada y enviada automáticamente al servidor central.
-
----
-
-## 👥 Equipo de Desarrollo
-
-* **Universidad:** Universidad Tecnológica del Perú (UTP)
-* **Curso:** Proyecto Integrador
-* **Grupo:** Grupo 06
+* **Institución:** Universidad Tecnológica del Perú (UTP)
+* **Carrera:** Ingeniería de Sistemas e Informática
+* **Asignatura:** Proyecto Integrador
+* **Equipo de Trabajo:** Grupo 06
