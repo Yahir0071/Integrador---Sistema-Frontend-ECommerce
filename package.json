@@ -1,0 +1,10 @@
+{
+  "name": "grupo06-ecommerce",
+  "version": "1.0.0",
+  "description": "Tienda web online - Grupo 06",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs"
+  }
+}
