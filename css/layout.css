@@ -420,3 +420,151 @@ main:focus {
     gap: 12px;
   }
 }
+
+
+/* --- Mejoras de Cabecera y Navegación Vectorial --- */
+.site-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.site-search input {
+  padding-right: 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.site-search input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(25, 71, 52, 0.12);
+}
+
+.search-submit-btn {
+  position: absolute;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+
+.search-submit-btn:hover {
+  color: var(--green);
+}
+
+.cart-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--green);
+  color: #ffffff;
+  min-width: 135px;
+  min-height: 42px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background-color 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+
+.cart-link:hover {
+  background: #123526;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(25, 71, 52, 0.2);
+}
+
+.cart-badge-pill {
+  background: var(--orange);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 12px;
+  min-width: 20px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.cart-badge-pill.pulse {
+  transform: scale(1.35);
+}
+
+.mobile-badge {
+  display: none;
+}
+
+.account-user-link,
+.account-login-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+  padding: 5px 9px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.account-user-link:hover,
+.account-login-link:hover {
+  background: var(--sage);
+}
+
+.account-name {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-logout-btn {
+  border: 0;
+  background: transparent;
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.account-logout-btn:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .cart-link {
+    background: transparent;
+    color: var(--green);
+    min-width: 0;
+    padding: 6px;
+    position: relative;
+    box-shadow: none !important;
+  }
+  .desktop-cart-label,
+  #desktop-cart-badge {
+    display: none;
+  }
+  .mobile-badge {
+    display: block;
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+  .menu-button,
+  .mobile-search-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

@@ -8,6 +8,5 @@ __pycache__/
 *.pyc
 *.log
 .idea/
-.vscode/
 .DS_Store
 Thumbs.db

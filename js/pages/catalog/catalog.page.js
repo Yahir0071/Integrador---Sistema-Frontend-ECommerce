@@ -13,7 +13,7 @@ function normalizeText(str) {
 
 /**
  * Renderiza la página de Catálogo (`/productos`).
- * Módulo de catálogo: filtros por categoría, rango de precios, buscador y ordenamiento.
+ * Módulo de catálogo: filtros por categoría, marcas, rango de precios, buscador y ordenamiento.
  *
  * @param {HTMLElement} container
  * @param {{ queryParams: URLSearchParams }} context
@@ -31,9 +31,9 @@ export function mountCatalogPage(container, { queryParams }) {
     'header',
     { className: 'page-heading' },
     el('a', { className: 'eyebrow', href: '/', dataset: { nav: 'true' }, text: 'INICIO / PRODUCTOS' }),
-    el('h1', { text: 'Encuentra lo que buscas' }),
+    el('h1', { text: 'Catálogo de Comercial Nova' }),
     el('p', {
-      text: 'Abarrotes, bebidas y artículos para tu hogar. Explora el catálogo y agrega tus favoritos al carrito.'
+      text: 'Abarrotes, bebidas y artículos para el hogar. Consulta disponibilidad en tiempo real y arma tu pedido para recojo en tienda.'
     })
   );
 
@@ -42,7 +42,7 @@ export function mountCatalogPage(container, { queryParams }) {
   const searchInput = el('input', {
     type: 'search',
     'aria-label': 'Buscar producto o marca',
-    placeholder: '⌕ Buscar producto o marca',
+    placeholder: 'Buscar producto o marca (ej. Gloria, arroz)...',
     value: query,
     onInput: e => {
       query = e.target.value;
@@ -128,7 +128,7 @@ export function mountCatalogPage(container, { queryParams }) {
   function renderFilters() {
     clearElement(filtersAside);
     filtersAside.append(
-      el('h3', { text: 'Filtrar productos' }),
+      el('h3', { text: 'Filtrar catálogo' }),
       el('h4', { text: 'Categorías' })
     );
 
@@ -146,7 +146,7 @@ export function mountCatalogPage(container, { queryParams }) {
           renderResults();
         }
       },
-      el('span', { 'aria-hidden': 'true', text: !category ? '◉' : '○' }),
+      el('span', { className: 'filter-radio-dot', 'aria-hidden': 'true' }),
       ' Todos los productos'
     );
     filtersAside.appendChild(allLink);
@@ -170,12 +170,38 @@ export function mountCatalogPage(container, { queryParams }) {
             renderResults();
           }
         },
-        el('span', { 'aria-hidden': 'true', text: selected ? '◉' : '○' }),
+        el('span', { className: 'filter-radio-dot', 'aria-hidden': 'true' }),
         ` ${c.nombre}`
       );
       filtersAside.appendChild(catLink);
     }
 
+    // Filtro por Marcas Populares
+    const uniqueBrands = [...new Set(catalogStore.products.map(p => p.marca).filter(Boolean))].slice(0, 6);
+    if (uniqueBrands.length) {
+      filtersAside.appendChild(el('h4', { text: 'Marcas frecuentes' }));
+      const brandsContainer = el('div', { className: 'catalog-filter-brands' });
+      uniqueBrands.forEach(b => {
+        const isBrandActive = normalizeText(query) === normalizeText(b);
+        const bBtn = el('button', {
+          type: 'button',
+          className: `filter-brand-tag ${isBrandActive ? 'active' : ''}`,
+          text: b,
+          onClick: () => {
+            query = isBrandActive ? '' : b;
+            searchInput.value = query;
+            limit = 12;
+            syncUrl(false);
+            renderFilters();
+            renderResults();
+          }
+        });
+        brandsContainer.appendChild(bBtn);
+      });
+      filtersAside.appendChild(brandsContainer);
+    }
+
+    // Filtro de Precio
     const priceLabel = el('h4', { text: `Precio máximo: S/ ${maxPrice}` });
     const priceRange = el('input', {
       type: 'range',
@@ -193,7 +219,7 @@ export function mountCatalogPage(container, { queryParams }) {
     const resetBtn = el('button', {
       type: 'button',
       className: 'text-button',
-      text: 'Limpiar filtros',
+      text: 'Limpiar todos los filtros',
       onClick: resetFilters
     });
 
@@ -203,12 +229,12 @@ export function mountCatalogPage(container, { queryParams }) {
   function renderResults() {
     const filtered = getFilteredProducts();
     const visible = filtered.slice(0, limit);
-    countDescription.textContent = `${filtered.length} productos · Precio y disponibilidad del catálogo de la tienda.`;
+    countDescription.textContent = `${filtered.length} productos disponibles en tienda física.`;
 
     clearElement(resultsBody);
 
     if (catalogStore.loading) {
-      resultsBody.appendChild(el('p', { className: 'state', role: 'status', text: 'Cargando productos…' }));
+      resultsBody.appendChild(el('p', { className: 'state', role: 'status', text: 'Consultando inventario central…' }));
     } else if (catalogStore.error) {
       resultsBody.appendChild(
         el(
@@ -228,8 +254,8 @@ export function mountCatalogPage(container, { queryParams }) {
         el(
           'div',
           { className: 'state' },
-          el('h3', { text: 'No encontramos productos' }),
-          el('p', { text: 'Prueba con otro nombre o cambia los filtros.' }),
+          el('h3', { text: 'No encontramos productos coincidentes' }),
+          el('p', { text: 'Prueba buscando con otra marca o limpia los filtros para ver todo el catálogo.' }),
           el('button', {
             type: 'button',
             className: 'button',
@@ -250,7 +276,7 @@ export function mountCatalogPage(container, { queryParams }) {
           el('button', {
             type: 'button',
             className: 'button load-more',
-            text: 'Ver más productos',
+            text: `Ver más productos (${filtered.length - visible.length} restantes)`,
             onClick: () => {
               limit += 12;
               renderResults();
