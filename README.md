@@ -9,14 +9,14 @@
 
 Este componente constituye la plataforma de comercio electrónico de **SGCIVORP**, orientada a los clientes finales del establecimiento comercial. Su objetivo principal es permitir la exploración del catálogo en tiempo real, la gestión del carrito de compras, el registro de clientes y la emisión de órdenes de compra con reserva de inventario y pago digital para recojo presencial en tienda.
 
-La aplicación está construida siguiendo la arquitectura de Aplicación de Página Única (SPA), sin intermediación de frameworks pesados, garantizando un rendimiento óptimo, bajo consumo de recursos y portabilidad total.
+La aplicación está construida siguiendo la arquitectura de Aplicación de Página Única (SPA) basada en componentes modulares y reutilizables (*Component-Based Architecture*), sin intermediación de frameworks pesados, garantizando un rendimiento óptimo, bajo consumo de recursos y portabilidad total.
 
 ---
 
 ## 2. Stack Tecnológico
 
 * **Presentación y Maquetación:** HTML5 semántico y CSS3 moderno con variables CSS, Grid y Flexbox. Totalmente adaptativo (responsive design) para dispositivos móviles, tabletas y ordenadores de escritorio.
-* **Lógica del Cliente:** JavaScript con Módulos ES nativos (`type="module"`), prescindiendo de dependencias externas por CDN o empaquetadores complejos.
+* **Lógica del Cliente:** JavaScript con Módulos ES nativos (`type="module"`), organizado en componentes/fragmentos reutilizables y módulos de vista independientes por funcionalidad (*Feature-Based Architecture*).
 * **Optimización de Medios:** Fotografías oficiales de productos en formato WebP comprimidas sin pérdida perceptible de calidad, asociadas dinámicamente mediante el código comercial del catálogo.
 * **Servidor Local de Entrega y Proxy:** Entorno en Node.js nativo (`server.mjs`) que expone los recursos estáticos en el puerto local `4200` y actúa como proxy inverso hacia la API del backend en el puerto `8080`, resolviendo políticas de origen cruzado (CORS).
 
@@ -89,27 +89,42 @@ node server.mjs
 
 ---
 
-## 6. Estructura de Directorios
+## 6. Estructura y Arquitectura Modular
+
+La aplicación sigue el principio **DRY (Don't Repeat Yourself)** y una **Arquitectura Basada en Componentes**:
 
 ```text
 Grupo06-Ecommerce/
-├── index.html                  # Documento principal y contenedor SPA
+├── index.html                  # Cascarón limpio de montaje SPA (sin código HTML duplicado)
 ├── package.json                # Definición de scripts de ejecución
 ├── server.mjs                  # Servidor HTTP local y proxy inverso a :8080
 ├── .vscode/
 │   └── launch.json             # Configuración de depuración para VS Code (F5)
 ├── css/
-│   ├── styles.css              # Variables globales, tipografía y resets
-│   ├── layout.css              # Cabecera, contenedor principal y pie de página
-│   ├── components.css          # Botones, formularios, modales y tarjetas
-│   └── pages.css               # Estilos específicos de cada vista
+│   ├── styles.css              # Variables globales, paleta de colores y resets
+│   ├── layout.css              # Estructura del shell, cabecera y pie de página
+│   ├── components.css          # Estilos de componentes modulares y widgets
+│   └── pages.css               # Estilos específicos de cada pantalla
 ├── js/
-│   ├── app.js                  # Punto de entrada y ciclo de vida de la aplicación
+│   ├── app.js                  # Orquestador del ciclo de vida y montaje de componentes
 │   ├── config.js               # Parámetros de red y rutas de la API REST
-│   ├── router.js               # Enrutamiento de vistas sin recarga de página
+│   ├── router.js               # Enrutamiento del cliente y guardianes de sesión
+│   ├── components/             # FRAGMENTOS / COMPONENTES REUTILIZABLES
+│   │   ├── header/             # Cabecera, topbar, menú, buscador y estado de cuenta
+│   │   ├── footer/             # Pie de página, mapa, horarios y Libro de Reclamaciones
+│   │   ├── product-card/       # Tarjeta de producto con precios y botón de compra
+│   │   ├── toast/              # Notificaciones emergentes del sistema
+│   │   └── whatsapp/           # Botón flotante de atención y soporte rápido
+│   ├── pages/                  # VISTAS MODULARIZADAS POR CARPETA
+│   │   ├── home/               # Portada, banners y categorías principales
+│   │   ├── catalog/            # Catálogo general y filtros dinámicos
+│   │   ├── detail/             # Ficha técnica individual y productos afines
+│   │   ├── cart/               # Carrito de compras y cálculo de importes
+│   │   ├── checkout/           # Confirmación de recojo y pago digital
+│   │   ├── orders/             # Historial y seguimiento de pedidos con QR
+│   │   └── auth/               # Inicio de sesión y registro de clientes
 │   ├── core/                   # Gestión reactiva de estado (catálogo, carrito, auth)
-│   ├── pages/                  # Controladores de página (catálogo, carrito, checkout, órdenes)
-│   └── shared/                 # Componentes compartidos, formateadores y utilidades
+│   └── shared/                 # Utilidades de formato, manipulación del DOM e información
 └── assets/
     ├── productos/              # 51 fotografías oficiales en formato WebP
     └── figma/                  # Gráficos vectoriales e iconografía SVG

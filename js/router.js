@@ -1,12 +1,12 @@
 import { authStore } from './core/auth.store.js';
-import { mountHomePage } from './pages/home.js';
-import { mountCatalogPage } from './pages/catalog.js';
-import { mountDetailPage } from './pages/detail.js';
-import { mountCartPage } from './pages/cart.js';
-import { mountAuthPage } from './pages/auth.js';
-import { mountCheckoutPage } from './pages/checkout.js';
-import { mountOrdersPage } from './pages/orders.js';
-import { mountOrderDetailPage } from './pages/order-detail.js';
+import { mountHomePage } from './pages/home/home.page.js';
+import { mountCatalogPage } from './pages/catalog/catalog.page.js';
+import { mountDetailPage } from './pages/detail/detail.page.js';
+import { mountCartPage } from './pages/cart/cart.page.js';
+import { mountAuthPage } from './pages/auth/auth.page.js';
+import { mountCheckoutPage } from './pages/checkout/checkout.page.js';
+import { mountOrdersPage } from './pages/orders/orders.page.js';
+import { mountOrderDetailPage } from './pages/orders/order-detail.page.js';
 
 let currentCleanup = null;
 let onRouteChangeCallback = null;

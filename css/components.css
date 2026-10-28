@@ -380,3 +380,47 @@
 .quantity input::-webkit-outer-spin-button {
   appearance: none;
 }
+
+
+/* WhatsApp Floating Widget */
+.whatsapp-float {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background-color: #25d366;
+  color: #ffffff !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 50px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  z-index: 99;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.whatsapp-float:hover {
+  transform: translateY(-2px);
+  background-color: #20ba5a;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.whatsapp-float svg {
+  flex-shrink: 0;
+  fill: #ffffff;
+}
+
+@media (max-width: 600px) {
+  .whatsapp-float {
+    bottom: 18px;
+    right: 18px;
+    padding: 12px;
+    border-radius: 50%;
+  }
+  .whatsapp-float .whatsapp-label {
+    display: none;
+  }
+}

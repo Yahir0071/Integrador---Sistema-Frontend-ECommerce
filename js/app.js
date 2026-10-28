@@ -1,168 +1,44 @@
-import { el, clearElement } from './shared/dom.js';
 import { authStore } from './core/auth.store.js';
 import { cartStore } from './core/cart.store.js';
 import { catalogStore } from './core/catalog.store.js';
-import { STORE_INFO, createStoreMapLink } from './shared/store-info.js';
+import { HeaderComponent } from './components/header/header.component.js';
+import { FooterComponent } from './components/footer/footer.component.js';
+import { ToastComponent } from './components/toast/toast.component.js';
+import { WhatsAppWidget } from './components/whatsapp/whatsapp.component.js';
 import { navigateTo, handleCurrentRoute, setRouteChangeListener } from './router.js';
 
 /**
- * Inicializa el shell principal de "La Bodega" (encabezado, buscador global,
- * menú móvil, estado de sesión, contador de carrito, pie de página y avisos toast).
- * Equivalente exacto de `App` (`app.ts` / `app.html`).
+ * Orquestador principal de la aplicación e-commerce.
+ * Inicializa los componentes reutilizables (fragments), gestiona el enrutamiento
+ * en el cliente (SPA) y sincroniza el estado global de usuario y carrito.
  */
 function bootstrapApp() {
-  const storeContact = document.getElementById('store-contact');
-  storeContact.append(
-    el('span', { text: STORE_INFO.direccion }),
-    el('span', { text: `Referencia: ${STORE_INFO.referencia}` }),
-    el('span', { text: STORE_INFO.horario }),
-    createStoreMapLink()
-  );
-  const topbar = document.getElementById('topbar');
-  const mainNav = document.getElementById('main-nav');
-  const navHome = document.getElementById('nav-home');
-  const navProductos = document.getElementById('nav-productos');
-  const mobileAccount = document.getElementById('mobile-account');
-  const desktopAccount = document.getElementById('desktop-account');
-  const siteSearch = document.getElementById('site-search');
-  const globalSearchInput = document.getElementById('global-search-input');
-  const mobileSearchBtn = document.getElementById('mobile-search-btn');
-  const desktopCartText = document.getElementById('desktop-cart-text');
-  const mobileCartText = document.getElementById('mobile-cart-text');
-  const menuBtn = document.getElementById('menu-btn');
-  const siteFooter = document.getElementById('site-footer');
-  const toast = document.getElementById('toast');
-  const toastText = document.getElementById('toast-text');
-  const toastClose = document.getElementById('toast-close');
-
-  let menuOpen = false;
-  let searchingOpen = false;
-
-  function setMenu(open) {
-    menuOpen = Boolean(open);
-    mainNav.classList.toggle('open', menuOpen);
-    menuBtn.setAttribute('aria-expanded', String(menuOpen));
-    menuBtn.textContent = menuOpen ? '×' : '☰';
+  // 1. Montaje de componentes modulares
+  const header = new HeaderComponent();
+  const headerContainer = document.getElementById('header-container');
+  if (headerContainer) {
+    header.mount(headerContainer);
   }
 
-  function setSearching(open) {
-    searchingOpen = Boolean(open);
-    siteSearch.classList.toggle('expanded', searchingOpen);
-    if (searchingOpen) {
-      globalSearchInput.focus();
-    }
+  const footer = new FooterComponent();
+  const footerContainer = document.getElementById('footer-container');
+  if (footerContainer) {
+    footer.mount(footerContainer);
   }
 
-  function handleLogout() {
-    authStore.logout();
-    setMenu(false);
-    navigateTo('/');
+  const toast = new ToastComponent();
+  const toastContainer = document.getElementById('toast-container');
+  if (toastContainer) {
+    toast.mount(toastContainer);
   }
 
-  function renderAccountLinks() {
-    clearElement(mobileAccount);
-    clearElement(desktopAccount);
-
-    if (authStore.authenticated) {
-      const userName = authStore.firstName;
-
-      mobileAccount.append(
-        el('a', {
-          href: '/pedidos',
-          dataset: { nav: 'true' },
-          text: 'Mis pedidos',
-          onClick: () => setMenu(false)
-        }),
-        el('span', { text: `Hola, ${userName}` }),
-        el('button', {
-          type: 'button',
-          className: 'text-button',
-          text: 'Cerrar sesión',
-          onClick: handleLogout
-        })
-      );
-
-      desktopAccount.append(
-        el('a', {
-          href: '/pedidos',
-          dataset: { nav: 'true' },
-          text: 'Mis pedidos',
-          onClick: () => setMenu(false)
-        }),
-        el('span', { text: `Hola, ${userName}` }),
-        el('button', {
-          type: 'button',
-          text: 'Salir',
-          onClick: handleLogout
-        })
-      );
-    } else {
-      mobileAccount.append(
-        el('a', {
-          href: '/ingresar',
-          dataset: { nav: 'true' },
-          text: 'Iniciar sesión',
-          onClick: () => setMenu(false)
-        }),
-        el('a', {
-          href: '/registro',
-          dataset: { nav: 'true' },
-          text: 'Crear mi cuenta',
-          onClick: () => setMenu(false)
-        })
-      );
-
-      desktopAccount.appendChild(
-        el('a', {
-          href: '/ingresar',
-          dataset: { nav: 'true' },
-          text: 'Ingresar'
-        })
-      );
-    }
+  const whatsapp = new WhatsAppWidget();
+  const whatsappContainer = document.getElementById('whatsapp-container');
+  if (whatsappContainer) {
+    whatsapp.mount(whatsappContainer);
   }
 
-  function renderCartAndToast() {
-    const count = cartStore.count;
-    desktopCartText.textContent = `Mi carrito · ${count}`;
-    mobileCartText.textContent = `Bolsa ${count}`;
-
-    const msg = cartStore.message;
-    if (msg) {
-      toastText.textContent = msg;
-      toast.hidden = false;
-    } else {
-      toastText.textContent = '';
-      toast.hidden = true;
-    }
-  }
-
-  function updateShellForRoute(pathname) {
-    const isHome = pathname === '/';
-    topbar.hidden = !isHome;
-    siteFooter.classList.toggle('compact', !isHome);
-
-    navHome.classList.toggle('active', isHome);
-    navProductos.classList.toggle('active', pathname.startsWith('/productos'));
-    setMenu(false);
-    setSearching(false);
-  }
-
-  // Event listeners
-  menuBtn.addEventListener('click', () => setMenu(!menuOpen));
-  mobileSearchBtn.addEventListener('click', () => setSearching(!searchingOpen));
-  toastClose.addEventListener('click', () => cartStore.setMessage(''));
-
-  siteSearch.addEventListener('submit', event => {
-    event.preventDefault();
-    const val = globalSearchInput.value.trim();
-    setSearching(false);
-    setMenu(false);
-    const target = val ? `/productos?buscar=${encodeURIComponent(val)}` : '/productos';
-    navigateTo(target);
-  });
-
-  // Intercept internal SPA links
+  // 2. Interceptación de enlaces para navegación SPA fluida
   document.addEventListener('click', event => {
     const anchor = event.target.closest('a');
     if (!anchor) return;
@@ -184,21 +60,22 @@ function bootstrapApp() {
       return;
     }
 
-    // Allow skip-link (#contenido) to focus main container without changing route
+    // Permitir salto accesible al contenido sin disparar cambio de ruta
     if (href === '#contenido') {
       return;
     }
 
     event.preventDefault();
-    setMenu(false);
+    header.setMenu(false);
     navigateTo(href);
   });
 
+  // 3. Manejo de navegación del navegador (atrás/adelante)
   window.addEventListener('popstate', () => {
     void handleCurrentRoute();
   });
 
-  // Handle session expiration on protected routes
+  // 4. Gestión de expiración de sesión en rutas protegidas
   authStore.onSessionExpired(() => {
     cartStore.setMessage('Tu sesión ha expirado. Inicia sesión nuevamente para continuar.');
     const path = window.location.pathname;
@@ -209,14 +86,22 @@ function bootstrapApp() {
     }
   });
 
-  setRouteChangeListener(updateShellForRoute);
-  authStore.subscribe(renderAccountLinks);
-  cartStore.subscribe(renderCartAndToast);
+  // 5. Sincronización reactiva de componentes con los estados globales
+  setRouteChangeListener(pathname => {
+    header.updateForRoute(pathname);
+    footer.updateForRoute(pathname);
+  });
 
-  renderAccountLinks();
-  renderCartAndToast();
+  authStore.subscribe(() => {
+    header.renderAccount();
+  });
 
-  // Initial catalog load and route mount
+  cartStore.subscribe(() => {
+    header.renderCart();
+    toast.render();
+  });
+
+  // 6. Carga inicial del catálogo y resolución de la ruta activa
   void catalogStore.refresh();
   void handleCurrentRoute();
 }
