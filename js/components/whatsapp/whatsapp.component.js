@@ -14,10 +14,10 @@ export class WhatsAppWidget {
     this.container = target;
     clearElement(this.container);
 
-    const telefonoRaw = (STORE_INFO.telefono || '999999999').replace(/\D/g, '');
+    const telefonoRaw = (STORE_INFO.telefono || '981287223').replace(/\D/g, '');
     const telefonoCompleto = telefonoRaw.startsWith('51') ? telefonoRaw : `51${telefonoRaw}`;
     const defaultMsg = encodeURIComponent('Hola Comercial Nova, deseo realizar una consulta sobre sus productos y pedidos.');
-    const waUrl = `https://wa.me/${telefonoCompleto}?text=${defaultMsg}`;
+    const waUrl = `https://wa.me/${981287223}?text=${defaultMsg}`;
 
     const iconSvg = `
       <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor" aria-hidden="true">
