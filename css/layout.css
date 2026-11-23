@@ -421,7 +421,6 @@ main:focus {
   }
 }
 
-
 /* --- Mejoras de Cabecera y Navegación Vectorial --- */
 .site-search {
   position: relative;
@@ -433,7 +432,9 @@ main:focus {
   padding-right: 36px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .site-search input:focus {
@@ -472,7 +473,10 @@ main:focus {
   border-radius: 10px;
   font-size: 13px;
   font-weight: 700;
-  transition: background-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  transition:
+    background-color 0.2s,
+    transform 0.15s,
+    box-shadow 0.2s;
 }
 
 .cart-link:hover {
@@ -566,5 +570,17 @@ main:focus {
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .site-search:not(.expanded) {
+    display: none;
+  }
+
+  .site-search.expanded {
+    display: flex;
+    z-index: 8;
+  }
+
+  .main-nav.open {
+    z-index: 7;
   }
 }

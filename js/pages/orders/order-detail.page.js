@@ -1,17 +1,17 @@
-import { el, clearElement } from '../../shared/dom.js';
-import { formatMoney, formatDateTime } from '../../shared/format.js';
-import { CONFIG } from '../../config.js';
-import { ordersApi, orderStatus } from '../../core/orders.api.js';
-import { cartStore } from '../../core/cart.store.js';
-import { catalogStore } from '../../core/catalog.store.js';
-import { createStoreMapLink } from '../../shared/store-info.js';
+import { el, clearElement } from "../../shared/dom.js";
+import { formatMoney, formatDateTime } from "../../shared/format.js";
+import { CONFIG } from "../../config.js";
+import { ordersApi, orderStatus } from "../../core/orders.api.js";
+import { cartStore } from "../../core/cart.store.js";
+import { catalogStore } from "../../core/catalog.store.js";
+import { createStoreMapLink } from "../../shared/store-info.js";
 import {
   PAYMENT_INFO,
   createPaymentMethods,
   createPaymentQr,
   createPurchaseSummary,
-  publicOrderEvent
-} from '../../shared/purchase-ui.js';
+  publicOrderEvent,
+} from "../../shared/purchase-ui.js";
 
 /**
  * Renderiza el detalle, seguimiento en vivo (polling cada 5 s), subida de comprobante,
@@ -27,14 +27,14 @@ export function mountOrderDetailPage(container, { params }) {
   const id = Number(params.id);
   let destroyed = false;
   let order = null;
-  let errorText = '';
-  let loadErrorText = '';
+  let errorText = "";
+  let loadErrorText = "";
   let pending = false;
-  let qrUrl = '';
+  let qrUrl = "";
   let qrRequested = false;
   let pollInFlight = false;
   let selectedFile = null;
-  let operacion = '';
+  let operacion = "";
   // Conservar el formulario mantiene FileList, valor y selección entre actualizaciones.
   let receiptForm = null;
   let fileInput = null;
@@ -42,30 +42,32 @@ export function mountOrderDetailPage(container, { params }) {
   let submitReceiptBtn = null;
   let fileName = null;
 
-  const page = el('div', { className: 'container order-page order-payment-page' });
+  const page = el("div", {
+    className: "container order-page order-payment-page",
+  });
   container.appendChild(page);
 
   function revokeQrUrl() {
     if (qrUrl) {
       URL.revokeObjectURL(qrUrl);
-      qrUrl = '';
+      qrUrl = "";
     }
   }
 
   function acceptOrder(p) {
     order = p;
-    if (p.estado !== 'PENDIENTE_PAGO') {
-      cartStore.setMessage('');
+    if (p.estado !== "PENDIENTE_PAGO") {
+      cartStore.setMessage("");
     }
     if (
       p.codigoRecojo &&
-      ['PAGADO', 'EN_PREPARACION', 'LISTO_PARA_RECOJO'].includes(p.estado) &&
+      ["PAGADO", "EN_PREPARACION", "LISTO_PARA_RECOJO"].includes(p.estado) &&
       !qrRequested
     ) {
       qrRequested = true;
       ordersApi
         .qr(p.id)
-        .then(blob => {
+        .then((blob) => {
           if (destroyed) return;
           revokeQrUrl();
           qrUrl = URL.createObjectURL(blob);
@@ -75,7 +77,9 @@ export function mountOrderDetailPage(container, { params }) {
           if (destroyed) return;
           qrRequested = false;
         });
-    } else if (!['PAGADO', 'EN_PREPARACION', 'LISTO_PARA_RECOJO'].includes(p.estado)) {
+    } else if (
+      !["PAGADO", "EN_PREPARACION", "LISTO_PARA_RECOJO"].includes(p.estado)
+    ) {
       revokeQrUrl();
       qrRequested = false;
     }
@@ -88,14 +92,14 @@ export function mountOrderDetailPage(container, { params }) {
     try {
       const p = await ordersApi.get(id);
       if (destroyed) return;
-      loadErrorText = '';
+      loadErrorText = "";
       acceptOrder(p);
     } catch (e) {
       if (destroyed) return;
       loadErrorText =
         e?.status === 403 || e?.status === 404
-          ? 'Este pedido no está disponible para tu cuenta.'
-          : 'No pudimos actualizar el pedido. Volveremos a intentarlo.';
+          ? "Este pedido no está disponible para tu cuenta."
+          : "No pudimos actualizar el pedido. Volveremos a intentarlo.";
       render();
     } finally {
       pollInFlight = false;
@@ -110,13 +114,16 @@ export function mountOrderDetailPage(container, { params }) {
       render();
       return;
     }
-    if (!CONFIG.ALLOWED_RECEIPT_TYPES.includes(f.type) || f.size > CONFIG.MAX_RECEIPT_BYTES) {
-      errorText = 'Elige una imagen PNG o JPEG de hasta 3 MB.';
-      input.value = '';
+    if (
+      !CONFIG.ALLOWED_RECEIPT_TYPES.includes(f.type) ||
+      f.size > CONFIG.MAX_RECEIPT_BYTES
+    ) {
+      errorText = "Elige una imagen PNG o JPEG de hasta 3 MB.";
+      input.value = "";
       render();
       return;
     }
-    errorText = '';
+    errorText = "";
     selectedFile = f;
     render();
   }
@@ -125,29 +132,40 @@ export function mountOrderDetailPage(container, { params }) {
     e.preventDefault();
     if (!selectedFile || operacion.trim().length < 3 || pending) return;
     pending = true;
-    errorText = '';
+    errorText = "";
     render();
     try {
-      const updated = await ordersApi.upload(id, selectedFile, operacion.trim());
+      const updated = await ordersApi.upload(
+        id,
+        selectedFile,
+        operacion.trim(),
+      );
       if (destroyed) return;
       selectedFile = null;
-      if (fileInput) fileInput.value = '';
+      if (fileInput) fileInput.value = "";
       pending = false;
       acceptOrder(updated);
     } catch (err) {
       if (destroyed) return;
       pending = false;
-      errorText = err?.error?.mensaje || 'No pudimos enviar el comprobante. Inténtalo nuevamente.';
+      errorText =
+        err?.error?.mensaje ||
+        "No pudimos enviar el comprobante. Inténtalo nuevamente.";
       render();
     }
   }
 
   async function handleCancel() {
-    if (pending || !window.confirm('¿Cancelar este pedido y liberar los productos reservados?')) {
+    if (
+      pending ||
+      !window.confirm(
+        "¿Cancelar este pedido y liberar los productos reservados?",
+      )
+    ) {
       return;
     }
     pending = true;
-    errorText = '';
+    errorText = "";
     render();
     try {
       const updated = await ordersApi.cancel(id);
@@ -158,7 +176,7 @@ export function mountOrderDetailPage(container, { params }) {
     } catch (err) {
       if (destroyed) return;
       pending = false;
-      errorText = err?.error?.mensaje || 'No se pudo cancelar el pedido.';
+      errorText = err?.error?.mensaje || "No se pudo cancelar el pedido.";
       render();
     }
   }
@@ -172,204 +190,307 @@ export function mountOrderDetailPage(container, { params }) {
     clearElement(page);
 
     page.appendChild(
-      el('a', { className: 'eyebrow', href: '/pedidos', dataset: { nav: 'true' }, text: '← MIS PEDIDOS' })
+      el("a", {
+        className: "eyebrow",
+        href: "/pedidos",
+        dataset: { nav: "true" },
+        text: "← MIS PEDIDOS",
+      }),
     );
 
     if (errorText || loadErrorText) {
       page.appendChild(
-        el('p', { className: 'order-error', role: 'alert', text: errorText || loadErrorText })
+        el("p", {
+          className: "order-error",
+          role: "alert",
+          text: errorText || loadErrorText,
+        }),
       );
     }
 
     if (!order) {
       if (!errorText && !loadErrorText) {
-        page.appendChild(el('p', { className: 'state', role: 'status', text: 'Consultando pedido…' }));
+        page.appendChild(
+          el("p", {
+            className: "state",
+            role: "status",
+            text: "Consultando pedido…",
+          }),
+        );
       }
       return;
     }
 
     const p = order;
 
-    page.appendChild(
-      el(
-        'header',
-        { className: 'page-heading' },
-        el('span', { className: 'eyebrow', text: 'TU PEDIDO' }),
-        el('h1', { text: p.estado === 'PENDIENTE_PAGO' ? 'Completa tu pago' : orderStatus[p.estado] || p.estado }),
-        el('p', { text: `${p.numero} · ${formatDateTime(p.creado, false)}` })
-      )
-    );
+    // Aviso para pedidos creados en modo demostración
+    if (Boolean(p.demo)) {
+      page.appendChild(
+        el(
+          "aside",
+          { className: "demo-banner", role: "note" },
+          el("strong", { text: "Modo demostración" }),
+          el("p", {
+            text: "Este pedido forma parte de una demostración del sistema. Los datos y estados se utilizan para probar el recorrido; no realices transferencias con información de prueba.",
+          }),
+        ),
+      );
+    }
 
-    const leftPanel = el('section', { className: 'panel payment-panel' });
+    const leftPanel = el("section", { className: "panel payment-panel" });
 
-    if (p.estado === 'PENDIENTE_PAGO') {
-      const holder = p.titular && !/demo|demostraci/i.test(p.titular) ? p.titular : PAYMENT_INFO.titular;
+    if (p.estado === "PENDIENTE_PAGO") {
+      const holder =
+        p.titular && !/demo|demostraci/i.test(p.titular)
+          ? p.titular
+          : PAYMENT_INFO.titular;
       leftPanel.append(
-        el('div', { className: 'payment-panel-heading' },
-          el('span', { className: 'status-pill', text: 'Pedido confirmado' }),
-          el('h2', { text: 'Paga con Yape o Plin' }),
-          el('p', { text: 'Un único QR para pagar desde tu aplicación preferida.' })),
-        el('div', { className: 'payment-instructions' },
+        el(
+          "div",
+          { className: "payment-panel-heading" },
+          el("span", { className: "status-pill", text: "Pedido confirmado" }),
+          el("h2", { text: "Paga con Yape o Plin" }),
+          el("p", {
+            text: "Un único QR para pagar desde tu aplicación preferida.",
+          }),
+        ),
+        el(
+          "div",
+          { className: "payment-instructions" },
           createPaymentQr(),
-          el('div', { className: 'payment-destination' },
+          el(
+            "div",
+            { className: "payment-destination" },
             createPaymentMethods(),
-            el('span', { className: 'checkout-field-label', text: 'Titular de la cuenta' }),
-            el('strong', { className: 'payment-holder', text: holder }),
-            el('span', { className: 'checkout-field-label', text: 'Importe exacto' }),
-            el('strong', { className: 'payment-amount', text: formatMoney(p.total) }),
-            el('p', { text: 'Verifica el titular y el importe antes de pagar. Luego adjunta tu comprobante para que podamos revisarlo.' }))),
-        el('p', { className: 'payment-deadline', text: `Productos reservados hasta ${formatDateTime(p.vence, true)}. Si el plazo terminó, cancela y crea otro pedido. Si ya pagaste, contacta a la bodega antes de volver a pagar.` }),
-        el('div', { className: 'receipt-heading' },
-          el('h2', { text: 'Adjunta tu comprobante' }),
-          el('p', { text: 'Envía la captura del pago y su número de operación.' }))
+            el("span", {
+              className: "checkout-field-label",
+              text: "Titular de la cuenta",
+            }),
+            el("strong", { className: "payment-holder", text: holder }),
+            el("span", {
+              className: "checkout-field-label",
+              text: "Importe exacto",
+            }),
+            el("strong", {
+              className: "payment-amount",
+              text: formatMoney(p.total),
+            }),
+            el("p", {
+              text: "Verifica el titular y el importe antes de pagar. Luego adjunta tu comprobante para que podamos revisarlo.",
+            }),
+          ),
+        ),
+        el("p", {
+          className: "payment-deadline",
+          text: `Productos reservados hasta ${formatDateTime(p.vence, true)}. Si el plazo terminó, cancela y crea otro pedido. Si ya pagaste, contacta a la bodega antes de volver a pagar.`,
+        }),
+        el(
+          "div",
+          { className: "receipt-heading" },
+          el("h2", { text: "Adjunta tu comprobante" }),
+          el("p", {
+            text: "Envía la captura del pago y su número de operación.",
+          }),
+        ),
       );
 
       if (!receiptForm) {
-        fileInput = el('input', {
-          id: 'receipt',
-          type: 'file',
-          accept: 'image/png,image/jpeg',
+        fileInput = el("input", {
+          id: "receipt",
+          type: "file",
+          accept: "image/png,image/jpeg",
           disabled: pending,
-          onChange: handleFileChoose
+          onChange: handleFileChoose,
         });
 
-        fileName = el('small', { id: 'receipt-name', className: 'section-description', role: 'status' });
+        fileName = el("small", {
+          id: "receipt-name",
+          className: "section-description",
+          role: "status",
+        });
 
-        submitReceiptBtn = el('button', {
-          type: 'submit',
-          className: 'button',
+        submitReceiptBtn = el("button", {
+          type: "submit",
+          className: "button",
           disabled: !selectedFile || operacion.trim().length < 3 || pending,
-          text: pending ? 'Enviando…' : 'Enviar comprobante para revisión'
+          text: pending ? "Enviando…" : "Enviar comprobante para revisión",
         });
 
-        operationInput = el('input', {
-          id: 'operation',
-          name: 'operation',
+        operationInput = el("input", {
+          id: "operation",
+          name: "operation",
           value: operacion,
-          minlength: '3',
-          maxlength: '100',
+          minlength: "3",
+          maxlength: "100",
           required: true,
-          placeholder: 'Escribe el número de operación',
-          onInput: e => {
+          placeholder: "Escribe el número de operación",
+          onInput: (e) => {
             operacion = e.target.value;
-            submitReceiptBtn.disabled = !selectedFile || operacion.trim().length < 3 || pending;
-          }
+            submitReceiptBtn.disabled =
+              !selectedFile || operacion.trim().length < 3 || pending;
+          },
         });
 
         receiptForm = el(
-          'form',
-          { className: 'receipt-form', onSubmit: handleUpload },
-          el('label', { for: 'receipt', text: 'Comprobante (PNG o JPEG, máximo 3 MB)' }),
+          "form",
+          { className: "receipt-form", onSubmit: handleUpload },
+          el("label", {
+            for: "receipt",
+            text: "Comprobante (PNG o JPEG, máximo 3 MB)",
+          }),
           fileInput,
           fileName,
-          el('label', {
-            for: 'operation',
-            text: 'Número de operación del comprobante'
+          el("label", {
+            for: "operation",
+            text: "Número de operación del comprobante",
           }),
           operationInput,
-          submitReceiptBtn
+          submitReceiptBtn,
         );
       }
       fileInput.disabled = pending;
       operationInput.disabled = pending;
-      submitReceiptBtn.disabled = !selectedFile || operacion.trim().length < 3 || pending;
-      submitReceiptBtn.textContent = pending ? 'Enviando…' : 'Enviar comprobante para revisión';
-      fileName.textContent = selectedFile ? `Archivo seleccionado: ${selectedFile.name}` : '';
+      submitReceiptBtn.disabled =
+        !selectedFile || operacion.trim().length < 3 || pending;
+      submitReceiptBtn.textContent = pending
+        ? "Enviando…"
+        : "Enviar comprobante para revisión";
+      fileName.textContent = selectedFile
+        ? `Archivo seleccionado: ${selectedFile.name}`
+        : "";
       fileName.hidden = !selectedFile;
 
-      const cancelBtn = el('button', {
-        type: 'button',
-        className: 'text-button danger',
+      const cancelBtn = el("button", {
+        type: "button",
+        className: "text-button danger",
         disabled: pending,
-        text: 'Cancelar pedido',
-        onClick: handleCancel
+        text: "Cancelar pedido",
+        onClick: handleCancel,
       });
 
       leftPanel.append(receiptForm, cancelBtn);
     }
 
-    if (p.estado === 'PENDIENTE_VERIFICACION') {
+    if (p.estado === "PENDIENTE_VERIFICACION") {
       leftPanel.append(
-        el('h2', { text: 'Recibimos tu comprobante' }),
-        el('p', {
-          text: 'El personal revisará tu comprobante y el abono en la cuenta de la bodega. Tus productos siguen reservados. Esta página se actualiza automáticamente.'
-        })
+        el("h2", { text: "Recibimos tu comprobante" }),
+        el("p", {
+          text: "El personal revisará tu comprobante y el abono en la cuenta de la bodega. Tus productos siguen reservados. Esta página se actualiza automáticamente.",
+        }),
       );
     }
 
-    if (p.codigoRecojo && ['PAGADO', 'EN_PREPARACION', 'LISTO_PARA_RECOJO'].includes(p.estado)) {
+    if (
+      p.codigoRecojo &&
+      ["PAGADO", "EN_PREPARACION", "LISTO_PARA_RECOJO"].includes(p.estado)
+    ) {
       leftPanel.append(
-        el('h2', { text: 'Tu código de recojo' }),
+        el("h2", { text: "Tu código de recojo" }),
         el(
-          'p',
+          "p",
           {},
-          'Muéstralo en la tienda cuando el pedido esté ',
-          el('strong', { text: 'listo para recoger' }),
-          '. Evita compartirlo.'
-        )
+          "Muéstralo en la tienda cuando el pedido esté ",
+          el("strong", { text: "listo para recoger" }),
+          ". Evita compartirlo.",
+        ),
       );
       if (qrUrl) {
         leftPanel.appendChild(
-          el('img', {
-            className: 'pickup-qr',
+          el("img", {
+            className: "pickup-qr",
             src: qrUrl,
-            alt: 'Código QR para recoger el pedido'
-          })
+            alt: "Código QR para recoger el pedido",
+          }),
         );
       }
       leftPanel.append(
-        el('p', { className: 'pickup-code', text: p.codigoRecojo }),
-        el('p', { text: p.direccion }),
-        el('p', { text: p.horario }),
-        createStoreMapLink(undefined, 'Ubicación actual de la bodega · Google Maps')
+        el("p", { className: "pickup-code", text: p.codigoRecojo }),
+        el("p", { text: p.direccion }),
+        el("p", { text: p.horario }),
+        createStoreMapLink(
+          undefined,
+          "Ubicación actual de la bodega · Google Maps",
+        ),
       );
     }
 
-    if (p.estado === 'ENTREGADO') {
+    if (p.estado === "ENTREGADO") {
       leftPanel.append(
-        el('h2', { text: '¡Gracias por tu compra!' }),
-        el('p', { text: 'Registramos la entrega de tus productos. El código ya fue utilizado.' })
+        el("h2", { text: "¡Gracias por tu compra!" }),
+        el("p", {
+          text: "Registramos la entrega de tus productos. El código ya fue utilizado.",
+        }),
       );
     }
 
-    if (['CANCELADO', 'EXPIRADO', 'RECHAZADO', 'REEMBOLSADO'].includes(p.estado)) {
+    if (
+      ["CANCELADO", "EXPIRADO", "RECHAZADO", "REEMBOLSADO"].includes(p.estado)
+    ) {
       leftPanel.append(
-        el('h2', { text: 'Pedido cerrado' }),
-        el('p', { text: p.observacion || 'Los productos reservados fueron liberados.' }),
-        el('a', { className: 'button', href: '/productos', dataset: { nav: 'true' }, text: 'Volver a la tienda' })
+        el("h2", { text: "Pedido cerrado" }),
+        el("p", {
+          text: p.observacion || "Los productos reservados fueron liberados.",
+        }),
+        el("a", {
+          className: "button",
+          href: "/productos",
+          dataset: { nav: "true" },
+          text: "Volver a la tienda",
+        }),
       );
     }
 
-    const historyList = el('ol', { className: 'order-history' });
-    (p.eventos || []).forEach(ev => {
+    const historyList = el("ol", { className: "order-history" });
+    (p.eventos || []).forEach((ev) => {
       historyList.appendChild(
         el(
-          'li',
+          "li",
           {},
-          el('strong', { text: orderStatus[ev.estado] || ev.estado }),
-          el('p', { text: publicOrderEvent(ev, p.demo) }),
-          el('small', { text: formatDateTime(ev.fecha, false) })
-        )
+          el("strong", { text: orderStatus[ev.estado] || ev.estado }),
+          el("p", { text: publicOrderEvent(ev, p.demo) }),
+          el("small", { text: formatDateTime(ev.fecha, false) }),
+        ),
       );
     });
 
-    leftPanel.append(el('h2', { className: 'history-title', text: 'Seguimiento' }), historyList);
+    leftPanel.append(
+      el("h2", { className: "history-title", text: "Seguimiento" }),
+      historyList,
+    );
 
-    const summary = createPurchaseSummary((p.lineas || []).map(line => ({
-      producto: catalogStore.products.find(product => product.id === line.productoId),
-      nombre: line.nombre,
-      cantidad: line.cantidad,
-      precio: line.precio
-    })), p.total, 'Resumen de tu pedido', p.estado === 'PENDIENTE_PAGO' ? 'Total a pagar' : 'Total del pedido');
-    summary.append(el('p', { className: 'purchase-next-step', text: 'Recojo en tienda · sin costo adicional' }));
+    const summary = createPurchaseSummary(
+      (p.lineas || []).map((line) => ({
+        producto: catalogStore.products.find(
+          (product) => product.id === line.productoId,
+        ),
+        nombre: line.nombre,
+        cantidad: line.cantidad,
+        precio: line.precio,
+      })),
+      p.total,
+      "Resumen de tu pedido",
+      p.estado === "PENDIENTE_PAGO" ? "Total a pagar" : "Total del pedido",
+    );
+    summary.append(
+      el("p", {
+        className: "purchase-next-step",
+        text: "Recojo en tienda · sin costo adicional",
+      }),
+    );
 
-    page.appendChild(el('div', { className: 'purchase-layout' }, leftPanel, summary));
+    page.appendChild(
+      el("div", { className: "purchase-layout" }, leftPanel, summary),
+    );
 
-    if (activeId === 'operation' || activeId === 'receipt') {
+    if (activeId === "operation" || activeId === "receipt") {
       const restored = document.getElementById(activeId);
       if (restored) {
         restored.focus();
-        if (activeId === 'operation' && typeof selectionStart === 'number' && typeof selectionEnd === 'number') {
+        if (
+          activeId === "operation" &&
+          typeof selectionStart === "number" &&
+          typeof selectionEnd === "number"
+        ) {
           restored.setSelectionRange(selectionStart, selectionEnd);
         }
       }
@@ -382,7 +503,7 @@ export function mountOrderDetailPage(container, { params }) {
   return () => {
     destroyed = true;
     selectedFile = null;
-    if (fileInput) fileInput.value = '';
+    if (fileInput) fileInput.value = "";
     window.clearInterval(intervalId);
     revokeQrUrl();
   };
