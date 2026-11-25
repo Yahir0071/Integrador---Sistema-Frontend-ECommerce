@@ -3,7 +3,7 @@ import { authStore } from '../../core/auth.store.js';
 import { navigateTo } from '../../router.js';
 
 const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,50}$/;
-const PHONE_PATTERN = /^[0-9+ ()-]{7,15}$/;
+const PHONE_PATTERN = /^(?=(?:.*\d){7,15})[0-9+ ()-]{7,15}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function sanitizeContinuePath(raw) {
@@ -59,19 +59,22 @@ export function mountAuthPage(container, { register = false, queryParams }) {
     if (!register) return null;
 
     if (name === 'nombreCompleto') {
-      if (!val) return { required: true };
-      if (val.length > 100) return { maxlength: true };
+      const normalized = val.trim();
+      if (!normalized) return { required: true };
+      if (normalized.length > 100) return { maxlength: true };
       return null;
     }
     if (name === 'email') {
-      if (!val) return { required: true };
-      if (!EMAIL_PATTERN.test(val)) return { email: true };
-      if (val.length > 100) return { maxlength: true };
+      const normalized = val.trim();
+      if (!normalized) return { required: true };
+      if (!EMAIL_PATTERN.test(normalized)) return { email: true };
+      if (normalized.length > 100) return { maxlength: true };
       return null;
     }
     if (name === 'telefono') {
-      if (!val) return { required: true };
-      if (!PHONE_PATTERN.test(val)) return { pattern: true };
+      const normalized = val.trim();
+      if (!normalized) return { required: true };
+      if (!PHONE_PATTERN.test(normalized)) return { pattern: true };
       return null;
     }
     return null;
@@ -84,6 +87,7 @@ export function mountAuthPage(container, { register = false, queryParams }) {
     if (e.email) return 'Ingresa un correo válido.';
     if (e.minlength) return 'Usa al menos 8 caracteres.';
     if (e.maxlength) return 'El texto es demasiado largo.';
+    if (name === 'telefono') return 'Ingresa un teléfono válido con entre 7 y 15 dígitos.';
     return name === 'username'
       ? 'Usa de 3 a 50 letras, números, puntos, guiones o guiones bajos.'
       : 'Revisa el formato de este campo.';
@@ -328,7 +332,16 @@ export function mountAuthPage(container, { register = false, queryParams }) {
     });
     updateAllFieldErrors();
 
-    if (isFormInvalid() || pending) return;
+    if (isFormInvalid() || pending) {
+      const fields = register
+        ? ['nombreCompleto', 'username', 'email', 'telefono', 'password']
+        : ['username', 'password'];
+      const firstInvalid = fields.find(f => Boolean(validateField(f)));
+      if (firstInvalid) {
+        form.querySelector(`[name="${firstInvalid}"]`)?.focus();
+      }
+      return;
+    }
 
     if (register && new TextEncoder().encode(values.password).length > 72) {
       setError('La contraseña no debe superar 72 bytes. Usa menos caracteres.');
@@ -339,11 +352,11 @@ export function mountAuthPage(container, { register = false, queryParams }) {
     try {
       if (register) {
         await authStore.register({
-          username: values.username,
+          username: values.username.trim(),
           password: values.password,
-          nombreCompleto: values.nombreCompleto,
-          email: values.email,
-          telefono: values.telefono
+          nombreCompleto: values.nombreCompleto.trim(),
+          email: values.email.trim(),
+          telefono: values.telefono.trim()
         });
       } else {
         await authStore.login(values.username, values.password);

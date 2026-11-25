@@ -159,7 +159,9 @@ export function mountDetailPage(container, { params }) {
       el('small', { text: 'Precio de venta del catálogo de la tienda' }),
       el('p', {
         className: 'availability',
-        text: product.disponible > 0 ? `Disponible: ${product.disponible} unidades` : 'Agotado por el momento'
+        text: product.disponible > 0
+          ? `Disponible: ${product.disponible} ${product.disponible === 1 ? 'unidad' : 'unidades'}`
+          : 'Agotado por el momento'
       })
     );
 

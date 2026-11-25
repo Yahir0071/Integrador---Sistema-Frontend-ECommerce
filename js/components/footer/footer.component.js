@@ -43,7 +43,7 @@ export class FooterComponent {
         href: '#',
         onClick: e => {
           e.preventDefault();
-          alert('Libro de Reclamaciones Virtual disponible conforme al Código de Protección y Defensa del Consumidor (Ley N° 29571). Comunícate con atención al cliente.');
+          alert('Libro de Reclamaciones (Demostración académica): este prototipo universitario no registra reclamos reales ante INDECOPI.');
         },
         text: 'Libro de Reclamaciones'
       })

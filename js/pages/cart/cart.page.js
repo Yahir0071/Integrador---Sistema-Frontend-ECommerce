@@ -71,7 +71,7 @@ export function mountCartPage(container) {
     const cartList = el(
       'section',
       { className: 'cart-list panel' },
-      el('h2', { text: `Productos seleccionados (${cartStore.count} unidades)` })
+      el('h2', { text: `Productos seleccionados (${cartStore.count} ${cartStore.count === 1 ? 'unidad' : 'unidades'})` })
     );
 
     lines.forEach(line => {
