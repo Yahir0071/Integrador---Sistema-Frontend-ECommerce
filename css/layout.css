@@ -584,3 +584,30 @@ main:focus {
     z-index: 7;
   }
 }
+
+/* --- Correcciones móvil y 320px (M02 / M03) --- */
+@media (max-width: 768px) {
+  .site-search:not(.expanded) {
+    display: none;
+  }
+  .site-search.expanded {
+    display: flex;
+    width: 100%;
+    z-index: 40;
+  }
+}
+
+@media (max-width: 360px) {
+  .header-inner {
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 6px;
+  }
+  .brand {
+    font-size: 16px;
+  }
+  .cart-link {
+    min-width: auto;
+    padding: 0 8px;
+  }
+}
