@@ -40,11 +40,8 @@ export class FooterComponent {
       el('a', { href: '/#nosotros', dataset: { nav: 'true' }, text: 'Nosotros y Ubicación' }),
       el('span', { text: 'Recojo en tienda' }),
       el('a', {
-        href: '#',
-        onClick: e => {
-          e.preventDefault();
-          alert('Libro de Reclamaciones (Demostración académica): este prototipo universitario no registra reclamos reales ante INDECOPI.');
-        },
+        href: '/libro-de-reclamaciones',
+        dataset: { nav: 'true' },
         text: 'Libro de Reclamaciones'
       })
     );

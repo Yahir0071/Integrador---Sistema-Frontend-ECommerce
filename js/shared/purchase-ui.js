@@ -4,10 +4,27 @@ import { createProductArt } from "./product-art.js";
 
 /** Datos de presentación; el modo contable del pedido sigue definido por el backend. */
 export const PAYMENT_INFO = Object.freeze({
-  titular: "Jorge Reyes",
-  // Incorporar aquí la ruta del único QR de Yape / Plin cuando el comercio lo entregue.
+  titular: "Comercial Nova · Demostración Académica UTP",
+  // Estado explícito del QR de pago:
+  // 'demo' = muestra QR referencial en modo demostración universitaria UTP
+  // 'pending' = muestra únicamente el recuadro reservado mientras se carga el QR oficial
+  // 'official' = QR comercial definitivo activado por la bodega
+  qrStatus: "demo",
   qrSrc: "/assets/qr/qr-pago.jpeg",
 });
+
+export function createAcademicPaymentBanner() {
+  return el(
+    "aside",
+    { className: "demo-banner", role: "note" },
+    el("strong", {
+      text: "Demostración académica universitaria (UTP)",
+    }),
+    el("p", {
+      text: "Este módulo de pago corresponde a una simulación académica del Proyecto Integrador (UTP). No representa un cobro comercial real hasta su activación oficial por la bodega; puedes adjuntar una captura de prueba para validar el recorrido.",
+    }),
+  );
+}
 
 export function createPaymentMethods() {
   return el(
@@ -140,25 +157,46 @@ export function createPaymentQr() {
         text: "QR",
       }),
       el("strong", {
-        text: "Espacio reservado para el QR oficial",
+        text: "Espacio reservado para el QR oficial de Yape / Plin",
       }),
       el("p", {
-        text: "La imagen del QR de Yape o Plin todavía no ha sido configurada por la bodega. No realices pagos a códigos distintos.",
+        text: "Entorno de demostración académica (UTP). La imagen definitiva del QR de Yape aún está pendiente de incorporación por la bodega; no realices pagos reales.",
       }),
     );
+
   const frame = el("div", { className: "payment-qr-frame" });
-  frame.append(
-    PAYMENT_INFO.qrSrc
-      ? el("img", {
-          src: PAYMENT_INFO.qrSrc,
-          alt: "QR único de pago para Yape y Plin",
-          width: "220",
-          height: "220",
-          className: "payment-qr-image",
-          onError: () => frame.replaceChildren(placeholder()),
-        })
-      : placeholder(),
-  );
+  const showImage =
+    PAYMENT_INFO.qrStatus !== "pending" && Boolean(PAYMENT_INFO.qrSrc);
+
+  if (!showImage) {
+    frame.append(placeholder());
+    return frame;
+  }
+
+  const qrImg = el("img", {
+    src: PAYMENT_INFO.qrSrc,
+    alt:
+      PAYMENT_INFO.qrStatus === "demo"
+        ? "QR de pago referencial para demostración académica en Yape y Plin"
+        : "QR único de pago para Yape y Plin",
+    width: "220",
+    height: "220",
+    className: "payment-qr-image",
+    onError: () => frame.replaceChildren(placeholder()),
+  });
+
+  frame.append(qrImg);
+
+  if (PAYMENT_INFO.qrStatus === "demo") {
+    frame.append(
+      el("p", {
+        className: "payment-qr-status",
+        role: "status",
+        text: "QR referencial · Demostración UTP (pendiente de QR oficial de Yape)",
+      }),
+    );
+  }
+
   return frame;
 }
 

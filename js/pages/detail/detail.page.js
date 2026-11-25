@@ -23,6 +23,7 @@ export function mountDetailPage(container, { params }) {
   container.appendChild(page);
 
   function render() {
+    const activeElementId = document.activeElement?.id || '';
     clearElement(page);
     const product = catalogStore.products.find(p => p.id === productId);
 
@@ -91,59 +92,107 @@ export function mountDetailPage(container, { params }) {
       amount = product.disponible;
     }
 
-    // Gallery
-    const galleryVisual =
-      activeTab === 'front'
-        ? createProductArt(product, false)
-        : el(
-            'div',
-            { className: 'gallery-info panel' },
-            el('h2', { text: activeTab === 'unit' ? 'Presentación' : 'Información' }),
-            el('p', {
-              text:
-                activeTab === 'unit'
-                  ? product.nombre
-                  : product.descripcion || 'Consulta la presentación y las indicaciones del producto en tienda.'
-            }),
-            el('p', { text: `${product.marca || ''} · ${product.unidadMedida}` })
-          );
+    // Gallery con pestañas accesibles (preserva foco y estado ARIA)
+    const tabSpecs = [
+      { key: 'front', id: 'tab-front', label: 'Vista frontal' },
+      { key: 'unit', id: 'tab-unit', label: 'Presentación' },
+      { key: 'info', id: 'tab-info', label: 'Información' }
+    ];
 
-    const galleryTabs = el(
-      'div',
-      { className: 'gallery-tabs', role: 'group', 'aria-label': 'Información del producto' },
-      el('button', {
-        type: 'button',
-        className: activeTab === 'front' ? 'active' : '',
-        text: 'Vista frontal',
-        onClick: () => {
-          activeTab = 'front';
-          render();
+    const galleryPanel = el('div', {
+      id: 'product-gallery-panel',
+      role: 'tabpanel',
+      'aria-labelledby': `tab-${activeTab}`
+    });
+
+    function buildPanelContent(tabKey) {
+      if (tabKey === 'front') {
+        return createProductArt(product, false);
+      }
+      return el(
+        'div',
+        { className: 'gallery-info panel' },
+        el('h2', { text: tabKey === 'unit' ? 'Presentación' : 'Información' }),
+        el('p', {
+          text:
+            tabKey === 'unit'
+              ? product.nombre
+              : product.descripcion ||
+                'Consulta la presentación y las indicaciones del producto en tienda.'
+        }),
+        el('p', { text: `${product.marca || ''} · ${product.unidadMedida}` })
+      );
+    }
+
+    const tabButtons = {};
+
+    function selectTab(nextKey, moveFocus = false) {
+      activeTab = nextKey;
+      clearElement(galleryPanel);
+      galleryPanel.setAttribute('aria-labelledby', `tab-${activeTab}`);
+      galleryPanel.appendChild(buildPanelContent(activeTab));
+
+      for (const spec of tabSpecs) {
+        const btn = tabButtons[spec.key];
+        if (!btn) continue;
+        const selected = spec.key === activeTab;
+        btn.className = selected ? 'active' : '';
+        btn.setAttribute('aria-selected', String(selected));
+        btn.setAttribute('tabindex', selected ? '0' : '-1');
+      }
+
+      if (moveFocus && tabButtons[activeTab]) {
+        tabButtons[activeTab].focus();
+      }
+    }
+
+    const galleryTabs = el('div', {
+      className: 'gallery-tabs',
+      role: 'tablist',
+      'aria-label': 'Información del producto',
+      onKeydown: event => {
+        const idx = tabSpecs.findIndex(t => t.key === activeTab);
+        if (idx === -1) return;
+        let nextIdx = null;
+        if (event.key === 'ArrowRight') {
+          nextIdx = (idx + 1) % tabSpecs.length;
+        } else if (event.key === 'ArrowLeft') {
+          nextIdx = (idx - 1 + tabSpecs.length) % tabSpecs.length;
+        } else if (event.key === 'Home') {
+          nextIdx = 0;
+        } else if (event.key === 'End') {
+          nextIdx = tabSpecs.length - 1;
         }
-      }),
-      el('button', {
-        type: 'button',
-        className: activeTab === 'unit' ? 'active' : '',
-        text: 'Presentación',
-        onClick: () => {
-          activeTab = 'unit';
-          render();
+        if (nextIdx !== null) {
+          event.preventDefault();
+          selectTab(tabSpecs[nextIdx].key, true);
         }
-      }),
-      el('button', {
+      }
+    });
+
+    for (const spec of tabSpecs) {
+      const selected = activeTab === spec.key;
+      const btn = el('button', {
+        id: spec.id,
         type: 'button',
-        className: activeTab === 'info' ? 'active' : '',
-        text: 'Información',
-        onClick: () => {
-          activeTab = 'info';
-          render();
-        }
-      })
-    );
+        role: 'tab',
+        'aria-selected': String(selected),
+        'aria-controls': 'product-gallery-panel',
+        tabindex: selected ? '0' : '-1',
+        className: selected ? 'active' : '',
+        text: spec.label,
+        onClick: () => selectTab(spec.key, false)
+      });
+      tabButtons[spec.key] = btn;
+      galleryTabs.appendChild(btn);
+    }
+
+    galleryPanel.appendChild(buildPanelContent(activeTab));
 
     const gallery = el(
       'div',
       { className: 'gallery' },
-      galleryVisual,
+      galleryPanel,
       galleryTabs,
       el('small', { className: 'art-caption', text: 'Imagen referencial del producto.' })
     );
@@ -159,9 +208,10 @@ export function mountDetailPage(container, { params }) {
       el('small', { text: 'Precio de venta del catálogo de la tienda' }),
       el('p', {
         className: 'availability',
-        text: product.disponible > 0
-          ? `Disponible: ${product.disponible} ${product.disponible === 1 ? 'unidad' : 'unidades'}`
-          : 'Agotado por el momento'
+        text:
+          product.disponible > 0
+            ? `Disponible: ${product.disponible} ${product.disponible === 1 ? 'unidad' : 'unidades'}`
+            : 'Agotado por el momento'
       })
     );
 
@@ -238,6 +288,10 @@ export function mountDetailPage(container, { params }) {
       page.appendChild(
         el('section', { className: 'related' }, el('h2', { text: 'También te puede interesar' }), relatedLinks)
       );
+    }
+
+    if (activeElementId && activeElementId.startsWith('tab-')) {
+      document.getElementById(activeElementId)?.focus();
     }
   }
 

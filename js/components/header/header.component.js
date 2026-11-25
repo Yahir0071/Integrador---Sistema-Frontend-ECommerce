@@ -202,11 +202,19 @@ export class HeaderComponent {
     this.menuBtn.addEventListener("click", () => this.toggleMenu());
     this.mobileSearchBtn.addEventListener("click", () => this.toggleSearch());
 
-    // Cerrar menú y buscador al presionar Escape
+    // Cerrar menú y buscador al presionar Escape y devolver el foco al disparador
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
+        const wasMenuOpen = this.menuOpen;
+        const wasSearchOpen = this.searchingOpen;
+        if (!wasMenuOpen && !wasSearchOpen) return;
         this.setMenu(false);
         this.setSearch(false);
+        if (wasSearchOpen) {
+          this.mobileSearchBtn?.focus();
+        } else if (wasMenuOpen) {
+          this.menuBtn?.focus();
+        }
       }
     });
 
