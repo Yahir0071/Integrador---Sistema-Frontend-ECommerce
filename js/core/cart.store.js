@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { formatMoney } from '../shared/format.js';
 import { catalogStore } from './catalog.store.js';
 import { parseCart, reconcileCart, totalCents } from './cart-domain.js';
 
@@ -11,6 +12,7 @@ class CartStore {
     this.catalog = catalogStore;
     this._entries = this._read();
     this._message = '';
+    this._lastPrices = new Map();
     this._listeners = new Set();
 
     this.catalog.subscribe(() => {
@@ -20,11 +22,38 @@ class CartStore {
       }
       const actual = this._entries;
       const reconciled = reconcileCart(actual, this.catalog.products);
-      if (JSON.stringify(actual) !== JSON.stringify(reconciled)) {
+      const qtyChanged = JSON.stringify(actual) !== JSON.stringify(reconciled);
+
+      const priceMap = new Map(
+        this.catalog.products.map(p => [p.id, Number(p.precioVenta)])
+      );
+      const priceChanged =
+        this._lastPrices.size > 0 &&
+        reconciled.some(
+          e =>
+            this._lastPrices.has(e.id) &&
+            priceMap.has(e.id) &&
+            this._lastPrices.get(e.id) !== priceMap.get(e.id)
+        );
+
+      this._lastPrices = priceMap;
+
+      if (qtyChanged) {
         this._entries = reconciled;
         this._save();
-        this._message = 'Actualizamos tu carrito según la disponibilidad de los productos.';
       }
+
+      if (qtyChanged && priceChanged) {
+        this._message =
+          'Actualizamos las cantidades y los precios de tu carrito según el catálogo vigente.';
+      } else if (priceChanged) {
+        this._message =
+          'Actualizamos los precios de tu carrito según el catálogo vigente.';
+      } else if (qtyChanged) {
+        this._message =
+          'Actualizamos tu carrito según la disponibilidad de los productos.';
+      }
+
       this._notify();
     });
   }
@@ -131,6 +160,42 @@ class CartStore {
     });
     this._save();
     this._notify();
+  }
+
+  /**
+   * Compara una instantánea previa del carrito con el catálogo y carrito vigentes
+   * para informar con precisión cambios de disponibilidad, stock o precio.
+   * @param {{ id: number, nombre: string, cantidad: number, precio: number }[]} previousSnapshot
+   * @returns {string[]}
+   */
+  describeChangesSince(previousSnapshot) {
+    const notes = [];
+    const currentLines = new Map(this.lines.map(line => [line.id, line]));
+    const products = new Map(this.catalog.products.map(p => [p.id, p]));
+
+    for (const prev of previousSnapshot) {
+      const product = products.get(prev.id);
+      const current = currentLines.get(prev.id);
+
+      if (!product || product.disponible <= 0 || !current) {
+        notes.push(`${prev.nombre} ya no está disponible y se retiró del carrito.`);
+        continue;
+      }
+
+      if (current.cantidad < prev.cantidad) {
+        notes.push(
+          `${prev.nombre} ajustó su cantidad de ${prev.cantidad} a ${current.cantidad} por stock disponible.`
+        );
+      }
+
+      if (Math.round(Number(product.precioVenta) * 100) !== Math.round(Number(prev.precio) * 100)) {
+        notes.push(
+          `${prev.nombre} actualizó su precio de ${formatMoney(prev.precio)} a ${formatMoney(product.precioVenta)}.`
+        );
+      }
+    }
+
+    return notes;
   }
 }
 

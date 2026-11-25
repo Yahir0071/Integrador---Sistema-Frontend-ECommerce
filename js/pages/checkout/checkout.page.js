@@ -7,6 +7,7 @@ import { ordersApi } from "../../core/orders.api.js";
 import { createStoreMapLink } from "../../shared/store-info.js";
 import { navigateTo } from "../../router.js";
 import {
+  createAcademicPaymentBanner,
   createCheckoutStep,
   createPaymentMethods,
   createPurchaseSummary,
@@ -41,12 +42,22 @@ export function mountCheckoutPage(container) {
   let shop = null;
   let pending = false;
   let errorText = "";
+  let syncNotices = [];
 
   const page = el("div", { className: "container order-page checkout-review" });
   container.appendChild(page);
 
+  function clearOrderIntent() {
+    try {
+      sessionStorage.removeItem(CONFIG.ORDER_INTENT_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
   async function loadShop() {
     errorText = "";
+    syncNotices = [];
     render();
     try {
       const data = await ordersApi.shop();
@@ -66,9 +77,17 @@ export function mountCheckoutPage(container) {
 
     if (authStore.user?.rol !== "CLIENTE") {
       errorText = "Usa una cuenta de cliente para comprar.";
+      syncNotices = [];
       render();
       return;
     }
+
+    const previousSnapshot = lines.map((l) => ({
+      id: l.id,
+      nombre: l.producto.nombre,
+      cantidad: l.cantidad,
+      precio: l.producto.precioVenta,
+    }));
 
     const items = lines.map((l) => ({
       productoId: l.id,
@@ -99,6 +118,7 @@ export function mountCheckoutPage(container) {
 
     pending = true;
     errorText = "";
+    syncNotices = [];
     render();
 
     try {
@@ -106,11 +126,7 @@ export function mountCheckoutPage(container) {
       if (destroyed) return;
 
       cartStore.deductPurchased(items);
-      try {
-        sessionStorage.removeItem(CONFIG.ORDER_INTENT_KEY);
-      } catch {
-        /* ignore */
-      }
+      clearOrderIntent();
       cartStore.setMessage(
         "Pedido creado. Revisa las instrucciones y adjunta tu comprobante.",
       );
@@ -124,22 +140,20 @@ export function mountCheckoutPage(container) {
       const b = e?.error && typeof e.error === "object" ? e.error : {};
 
       const backendMessage = b.mensaje || b.message || e?.message || "";
-      const status = Number(e?.status || b.status || 0);
+      const status = Number(e?.status ?? b.status ?? 0);
       const normalizedMessage = String(backendMessage).toLowerCase();
 
       // Errores de conflicto: HTTP 409
       if (status === 409) {
+        clearOrderIntent();
         if (normalizedMessage.includes("stock insuficiente")) {
-          void catalogStore.refresh();
-          errorText = `${backendMessage} Actualiza el carrito antes de volver a intentarlo.`;
+          errorText = `${backendMessage} Revisa las cantidades actualizadas antes de volver a intentarlo.`;
         } else if (
           normalizedMessage.includes("cambió el precio") ||
           normalizedMessage.includes("cambio el precio")
         ) {
-          void catalogStore.refresh();
           errorText = `${backendMessage} Revisa los precios actualizados de tu carrito.`;
         } else if (normalizedMessage.includes("producto no disponible")) {
-          void catalogStore.refresh();
           errorText = `${backendMessage} Retira ese producto del carrito para continuar.`;
         } else if (normalizedMessage.includes("pedido pendiente")) {
           errorText = `${backendMessage} Revisa la sección “Mis pedidos” antes de crear otro.`;
@@ -153,11 +167,19 @@ export function mountCheckoutPage(container) {
             "El servidor rechazó el registro por una restricción de datos. El pedido no se confirmó. Revisa “Mis pedidos” antes de reintentar; si el problema continúa, contacta con la bodega.";
         }
 
+        await catalogStore.refresh();
+        if (destroyed) return;
+        syncNotices = cartStore.describeChangesSince(previousSnapshot);
+
         // Datos incorrectos
       } else if (status === 400 || status === 422) {
+        clearOrderIntent();
         errorText =
           backendMessage ||
           "Hay datos del pedido que no son válidos. Revisa tu carrito e inténtalo nuevamente.";
+        await catalogStore.refresh();
+        if (destroyed) return;
+        syncNotices = cartStore.describeChangesSince(previousSnapshot);
 
         // Sesión no válida
       } else if (status === 401) {
@@ -172,6 +194,7 @@ export function mountCheckoutPage(container) {
 
         // Recurso no encontrado
       } else if (status === 404) {
+        clearOrderIntent();
         errorText =
           "No encontramos uno de los recursos del pedido. Actualiza la tienda y vuelve a intentarlo.";
 
@@ -180,10 +203,13 @@ export function mountCheckoutPage(container) {
         errorText =
           "No se pudo conectar con el servidor. Comprueba tu conexión y que la tienda esté disponible.";
 
-        // Error interno del servidor
+        // Error interno o pasarela no disponible
       } else if (status >= 500) {
         errorText =
-          "El servidor tuvo un problema al procesar el pedido. No repitas el pago; revisa “Mis pedidos” y vuelve a intentarlo más tarde.";
+          status === 502 || status === 503 || status === 504
+            ? backendMessage ||
+              "El servicio no está disponible temporalmente. Intenta nuevamente en unos segundos."
+            : "El servidor tuvo un problema al procesar el pedido. No repitas el pago; revisa “Mis pedidos” y vuelve a intentarlo más tarde.";
 
         // Otros errores
       } else {
@@ -217,13 +243,19 @@ export function mountCheckoutPage(container) {
     );
 
     if (errorText) {
-      page.appendChild(
-        el(
-          "div",
-          { className: "state alert-box", role: "alert" },
-          el("p", { text: errorText }),
-        ),
+      const alertBox = el(
+        "div",
+        { className: "state alert-box", role: "alert" },
+        el("p", { text: errorText }),
       );
+      if (syncNotices.length) {
+        const list = el("ul", { className: "checkout-sync-list" });
+        syncNotices.forEach((note) => {
+          list.appendChild(el("li", { text: note }));
+        });
+        alertBox.appendChild(list);
+      }
+      page.appendChild(alertBox);
     }
 
     if (catalogStore.loading) {
@@ -353,14 +385,15 @@ export function mountCheckoutPage(container) {
       "03",
       "Pago con QR",
       "Yape o Plin, elige la aplicación que prefieras.",
+      createAcademicPaymentBanner(),
       createPaymentMethods(),
       el("p", {
         className: "checkout-payment-note",
-        text: "Después de confirmar tu pedido verás el espacio del QR y podrás adjuntar tu comprobante. El personal revisará el pago antes de preparar tu compra.",
+        text: "Después de confirmar tu pedido verás el espacio del QR de pago y podrás adjuntar tu comprobante de forma manual. El personal revisará el pago antes de preparar tu compra.",
       }),
       el("p", {
         className: "checkout-qr-hint",
-        text: "El QR de pago definitivo se incorporará cuando la bodega proporcione su imagen oficial.",
+        text: "Estado del QR de pago: demostración académica universitaria (UTP) mientras se incorpora la imagen definitiva proporcionada por la bodega.",
       }),
     );
 

@@ -2,9 +2,41 @@ import { el, clearElement } from '../../shared/dom.js';
 import { authStore } from '../../core/auth.store.js';
 import { navigateTo } from '../../router.js';
 
+const NAME_PATTERN = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\s[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/;
 const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,50}$/;
-const PHONE_PATTERN = /^(?=(?:.*\d){7,15})[0-9+ ()-]{7,15}$/;
+const PHONE_PATTERN = /^9\d{8}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const FIELD_ALIASES = Object.freeze({
+  nombre: 'nombreCompleto',
+  nombrecompleto: 'nombreCompleto',
+  usuario: 'username',
+  username: 'username',
+  correo: 'email',
+  email: 'email',
+  celular: 'telefono',
+  telefono: 'telefono',
+  clave: 'password',
+  contrasena: 'password',
+  password: 'password'
+});
+
+function normalizeName(raw) {
+  return String(raw || '').trim().replace(/\s+/g, ' ');
+}
+
+function normalizePhone(raw) {
+  return String(raw || '').replace(/\s+/g, '');
+}
+
+function resolveFieldAlias(rawKey) {
+  const key = String(rawKey || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+  return FIELD_ALIASES[key] || null;
+}
 
 function sanitizeContinuePath(raw) {
   const path = raw || '/';
@@ -42,66 +74,87 @@ export function mountAuthPage(container, { register = false, queryParams }) {
     password: false
   };
 
+  const serverFieldErrors = {
+    nombreCompleto: '',
+    username: '',
+    email: '',
+    telefono: '',
+    password: ''
+  };
+
+  function clearServerFieldErrors() {
+    Object.keys(serverFieldErrors).forEach(k => {
+      serverFieldErrors[k] = '';
+    });
+  }
+
   function validateField(name) {
-    const val = String(values[name] || '');
+    const raw = String(values[name] || '');
     if (name === 'username') {
+      const val = raw.trim();
       if (!val) return { required: true };
       if (val.length > 50) return { maxlength: true };
       if (register && !USERNAME_PATTERN.test(val)) return { pattern: true };
       return null;
     }
     if (name === 'password') {
-      if (!val) return { required: true };
-      if (register && val.length < 8) return { minlength: true };
-      if (register && val.length > 72) return { maxlength: true };
+      if (!raw) return { required: true };
+      if (register && raw.length < 8) return { minlength: true };
+      if (register && raw.length > 72) return { maxlength: true };
       return null;
     }
     if (!register) return null;
 
     if (name === 'nombreCompleto') {
-      const normalized = val.trim();
+      const normalized = normalizeName(raw);
       if (!normalized) return { required: true };
       if (normalized.length > 100) return { maxlength: true };
+      if (normalized.length < 2 || !NAME_PATTERN.test(normalized)) return { nameFormat: true };
       return null;
     }
     if (name === 'email') {
-      const normalized = val.trim();
-      if (!normalized) return { required: true };
-      if (!EMAIL_PATTERN.test(normalized)) return { email: true };
-      if (normalized.length > 100) return { maxlength: true };
+      const val = raw.trim();
+      if (!val) return { required: true };
+      if (!EMAIL_PATTERN.test(val)) return { email: true };
+      if (val.length > 100) return { maxlength: true };
       return null;
     }
     if (name === 'telefono') {
-      const normalized = val.trim();
-      if (!normalized) return { required: true };
-      if (!PHONE_PATTERN.test(normalized)) return { pattern: true };
+      const cleanPhone = normalizePhone(raw);
+      if (!cleanPhone) return { required: true };
+      if (!PHONE_PATTERN.test(cleanPhone)) return { phoneFormat: true };
       return null;
     }
     return null;
   }
 
   function getFieldMessage(name) {
+    if (serverFieldErrors[name]) return serverFieldErrors[name];
     const e = validateField(name);
     if (!e) return '';
     if (e.required) return 'Completa este campo.';
     if (e.email) return 'Ingresa un correo válido.';
     if (e.minlength) return 'Usa al menos 8 caracteres.';
     if (e.maxlength) return 'El texto es demasiado largo.';
-    if (name === 'telefono') return 'Ingresa un teléfono válido con entre 7 y 15 dígitos.';
+    if (e.nameFormat) return 'Ingresa un nombre válido usando solo letras y espacios.';
+    if (e.phoneFormat) return 'Ingresa un celular peruano válido de 9 dígitos que inicie con 9.';
     return name === 'username'
       ? 'Usa de 3 a 50 letras, números, puntos, guiones o guiones bajos.'
       : 'Revisa el formato de este campo.';
   }
 
   function isInvalid(name) {
-    return Boolean(touched[name] && validateField(name));
+    return Boolean(serverFieldErrors[name] || (touched[name] && validateField(name)));
   }
 
-  function isFormInvalid() {
-    const fields = register
+  function getActiveFields() {
+    return register
       ? ['nombreCompleto', 'username', 'email', 'telefono', 'password']
       : ['username', 'password'];
-    return fields.some(f => Boolean(validateField(f)));
+  }
+
+  function getFirstInvalidField() {
+    return getActiveFields().find(f => Boolean(serverFieldErrors[f] || validateField(f))) || null;
   }
 
   const intro = el(
@@ -162,7 +215,17 @@ export function mountAuthPage(container, { register = false, queryParams }) {
   const errorRefs = {};
   const inputRefs = {};
 
-  function createFieldBlock({ id, name, label, type = 'text', autocomplete, placeholder, errorId }) {
+  function createFieldBlock({
+    id,
+    name,
+    label,
+    type = 'text',
+    autocomplete,
+    placeholder,
+    maxlength,
+    required = true,
+    errorId
+  }) {
     const labelEl = el('label', { for: id, text: label });
     const inputEl = el('input', {
       id,
@@ -170,11 +233,14 @@ export function mountAuthPage(container, { register = false, queryParams }) {
       type,
       autocomplete,
       placeholder,
+      required,
+      maxlength,
       value: values[name],
       'aria-invalid': isInvalid(name) ? 'true' : 'false',
       'aria-describedby': errorId,
       onInput: e => {
         values[name] = e.target.value;
+        serverFieldErrors[name] = '';
         updateFieldError(name);
       },
       onBlur: () => {
@@ -207,6 +273,80 @@ export function mountAuthPage(container, { register = false, queryParams }) {
     Object.keys(inputRefs).forEach(updateFieldError);
   }
 
+  function applyBackendErrors(err) {
+    const detalles = err?.error?.detalles;
+    const backendMsg = err?.error?.mensaje || err?.message || '';
+    const unmappedNotes = [];
+    let firstMapped = null;
+
+    const assignFieldError = (rawKey, rawMsg) => {
+      const target = resolveFieldAlias(rawKey);
+      const msgText = String(rawMsg || '').trim();
+      if (!msgText) return false;
+      if (target && inputRefs[target]) {
+        serverFieldErrors[target] = msgText;
+        touched[target] = true;
+        if (!firstMapped) firstMapped = target;
+        return true;
+      }
+      return false;
+    };
+
+    if (Array.isArray(detalles)) {
+      for (const item of detalles) {
+        if (item && typeof item === 'object') {
+          const key = item.campo || item.field || item.nombre || '';
+          const msg = item.mensaje || item.message || item.error || '';
+          if (!assignFieldError(key, msg) && msg) {
+            unmappedNotes.push(String(msg));
+          }
+        } else if (typeof item === 'string') {
+          const colonIdx = item.indexOf(':');
+          if (colonIdx > 0) {
+            const key = item.slice(0, colonIdx);
+            const msg = item.slice(colonIdx + 1);
+            if (!assignFieldError(key, msg)) {
+              unmappedNotes.push(item);
+            }
+          } else if (item.trim()) {
+            unmappedNotes.push(item.trim());
+          }
+        }
+      }
+    } else if (detalles && typeof detalles === 'object') {
+      for (const [key, val] of Object.entries(detalles)) {
+        if (!assignFieldError(key, val) && val) {
+          unmappedNotes.push(String(val));
+        }
+      }
+    }
+
+    // Respaldo para conflictos 409 conocidos sin objeto `detalles` explícito
+    if (!firstMapped && register && Number(err?.status) === 409 && backendMsg) {
+      const lower = backendMsg.toLowerCase();
+      if (lower.includes('usuario') || lower.includes('username')) {
+        assignFieldError('username', backendMsg);
+      } else if (lower.includes('correo') || lower.includes('email')) {
+        assignFieldError('email', backendMsg);
+      } else if (lower.includes('celular') || lower.includes('teléfono') || lower.includes('telefono')) {
+        assignFieldError('telefono', backendMsg);
+      }
+    }
+
+    updateAllFieldErrors();
+
+    if (firstMapped) {
+      inputRefs[firstMapped].focus();
+      setError(unmappedNotes.join(' '));
+    } else {
+      setError(
+        unmappedNotes.join(' ') ||
+          backendMsg ||
+          'No pudimos completar la solicitud. Revisa tus datos.'
+      );
+    }
+  }
+
   if (register) {
     form.append(
       ...createFieldBlock({
@@ -215,6 +355,8 @@ export function mountAuthPage(container, { register = false, queryParams }) {
         label: 'Nombre completo',
         autocomplete: 'name',
         placeholder: 'Tu nombre y apellido',
+        maxlength: 100,
+        required: true,
         errorId: 'nombre-error'
       })
     );
@@ -227,6 +369,8 @@ export function mountAuthPage(container, { register = false, queryParams }) {
       label: 'Usuario',
       autocomplete: 'username',
       placeholder: 'Tu nombre de usuario',
+      maxlength: 50,
+      required: true,
       errorId: 'usuario-error'
     })
   );
@@ -240,6 +384,8 @@ export function mountAuthPage(container, { register = false, queryParams }) {
         type: 'email',
         autocomplete: 'email',
         placeholder: 'correo@ejemplo.com',
+        maxlength: 100,
+        required: true,
         errorId: 'email-error'
       }),
       ...createFieldBlock({
@@ -249,6 +395,8 @@ export function mountAuthPage(container, { register = false, queryParams }) {
         type: 'tel',
         autocomplete: 'tel',
         placeholder: '999 999 999',
+        maxlength: 15,
+        required: true,
         errorId: 'telefono-error'
       })
     );
@@ -262,11 +410,15 @@ export function mountAuthPage(container, { register = false, queryParams }) {
     type: showPassword ? 'text' : 'password',
     autocomplete: register ? 'new-password' : 'current-password',
     placeholder: register ? 'Al menos 8 caracteres' : 'Tu contraseña',
+    required: true,
+    maxlength: 72,
+    minlength: register ? 8 : undefined,
     value: values.password,
     'aria-invalid': isInvalid('password') ? 'true' : 'false',
     'aria-describedby': 'password-error',
     onInput: e => {
       values.password = e.target.value;
+      serverFieldErrors.password = '';
       updateFieldError('password');
     },
     onBlur: () => {
@@ -327,46 +479,50 @@ export function mountAuthPage(container, { register = false, queryParams }) {
   form.addEventListener('submit', async e => {
     e.preventDefault();
     setError('');
+    clearServerFieldErrors();
     Object.keys(touched).forEach(k => {
       touched[k] = true;
     });
     updateAllFieldErrors();
 
-    if (isFormInvalid() || pending) {
-      const fields = register
-        ? ['nombreCompleto', 'username', 'email', 'telefono', 'password']
-        : ['username', 'password'];
-      const firstInvalid = fields.find(f => Boolean(validateField(f)));
-      if (firstInvalid) {
-        form.querySelector(`[name="${firstInvalid}"]`)?.focus();
+    const firstInvalid = getFirstInvalidField();
+    if (firstInvalid || pending) {
+      if (firstInvalid && inputRefs[firstInvalid]) {
+        inputRefs[firstInvalid].focus();
       }
       return;
     }
 
     if (register && new TextEncoder().encode(values.password).length > 72) {
-      setError('La contraseña no debe superar 72 bytes. Usa menos caracteres.');
+      serverFieldErrors.password = 'La contraseña no debe superar 72 bytes. Usa menos caracteres.';
+      updateFieldError('password');
+      inputRefs.password?.focus();
       return;
     }
 
     setPendingState(true);
     try {
       if (register) {
+        const cleanName = normalizeName(values.nombreCompleto);
+        const cleanPhone = normalizePhone(values.telefono);
+        const cleanUsername = values.username.trim();
+        const cleanEmail = values.email.trim();
         await authStore.register({
-          username: values.username.trim(),
+          username: cleanUsername,
           password: values.password,
-          nombreCompleto: values.nombreCompleto.trim(),
-          email: values.email.trim(),
-          telefono: values.telefono.trim()
+          nombreCompleto: cleanName,
+          email: cleanEmail,
+          telefono: cleanPhone
         });
       } else {
-        await authStore.login(values.username, values.password);
+        await authStore.login(values.username.trim(), values.password);
       }
       navigateTo(continueTo);
     } catch (err) {
       if (err?.status === 0) {
         setError('No pudimos conectar con la tienda. Inténtalo nuevamente.');
       } else {
-        setError(err?.error?.mensaje || 'No pudimos completar la solicitud. Revisa tus datos.');
+        applyBackendErrors(err);
       }
     } finally {
       setPendingState(false);

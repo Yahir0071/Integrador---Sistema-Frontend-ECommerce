@@ -67,20 +67,40 @@ export async function apiFetch(path, options = {}) {
   }
 
   if (!response.ok) {
+    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+    const isJson = contentType.includes('application/json') || contentType.includes('+json');
+
+    if (!isJson) {
+      const unavailableMsg =
+        'El servicio no está disponible temporalmente. Intenta nuevamente en unos segundos.';
+      throw new ApiError(
+        response.status,
+        { mensaje: unavailableMsg, detalles: null },
+        unavailableMsg
+      );
+    }
+
     let errorPayload = null;
     try {
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        errorPayload = await response.json();
-      } else {
-        const text = await response.text();
-        errorPayload = text ? { mensaje: text } : null;
-      }
+      errorPayload = await response.json();
     } catch {
       errorPayload = null;
     }
-    const msg = errorPayload?.mensaje || `Error HTTP ${response.status}`;
-    throw new ApiError(response.status, errorPayload, msg);
+
+    const msg =
+      errorPayload?.mensaje ||
+      errorPayload?.message ||
+      `Error HTTP ${response.status}`;
+    const normalizedPayload =
+      errorPayload && typeof errorPayload === 'object'
+        ? {
+            ...errorPayload,
+            mensaje: msg,
+            detalles: errorPayload.detalles ?? null
+          }
+        : { mensaje: msg, detalles: null };
+
+    throw new ApiError(response.status, normalizedPayload, msg);
   }
 
   if (options.responseType === 'blob') {

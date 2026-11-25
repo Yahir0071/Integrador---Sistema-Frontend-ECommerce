@@ -7,6 +7,7 @@ import { catalogStore } from "../../core/catalog.store.js";
 import { createStoreMapLink } from "../../shared/store-info.js";
 import {
   PAYMENT_INFO,
+  createAcademicPaymentBanner,
   createPaymentMethods,
   createPaymentQr,
   createPurchaseSummary,
@@ -223,27 +224,14 @@ export function mountOrderDetailPage(container, { params }) {
 
     const p = order;
 
-    // Aviso para pedidos creados en modo demostración
-    if (Boolean(p.demo)) {
-      page.appendChild(
-        el(
-          "aside",
-          { className: "demo-banner", role: "note" },
-          el("strong", { text: "Modo demostración" }),
-          el("p", {
-            text: "Este pedido forma parte de una demostración del sistema. Los datos y estados se utilizan para probar el recorrido; no realices transferencias con información de prueba.",
-          }),
-        ),
-      );
-    }
+    // Aviso permanente de entorno académico universitario (UTP) en la sección de pago/pedido
+    page.appendChild(createAcademicPaymentBanner());
 
     const leftPanel = el("section", { className: "panel payment-panel" });
 
     if (p.estado === "PENDIENTE_PAGO") {
       const holder =
-        p.titular && !/demo|demostraci/i.test(p.titular)
-          ? p.titular
-          : PAYMENT_INFO.titular;
+        (p.titular && String(p.titular).trim()) || PAYMENT_INFO.titular;
       leftPanel.append(
         el(
           "div",

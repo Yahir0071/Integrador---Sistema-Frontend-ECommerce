@@ -94,14 +94,25 @@ function serveStaticOrSpa(req, res) {
   }
 
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-    // Fallback SPA hacia index.html para rutas de cliente (/productos, /carrito, /pedidos, etc.)
-    const ext = path.extname(safePath);
-    if (ext && ext !== '.html') {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Recurso no encontrado');
-      return;
+    if (resource === '/favicon.ico') {
+      const svgFavicon = path.join(__dirname, 'favicon.svg');
+      if (fs.existsSync(svgFavicon) && fs.statSync(svgFavicon).isFile()) {
+        filePath = svgFavicon;
+      } else {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+    } else {
+      // Fallback SPA hacia index.html para rutas de cliente (/productos, /carrito, /pedidos, etc.)
+      const ext = path.extname(safePath);
+      if (ext && ext !== '.html') {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Recurso no encontrado');
+        return;
+      }
+      filePath = path.join(__dirname, 'index.html');
     }
-    filePath = path.join(__dirname, 'index.html');
   }
 
   const ext = path.extname(filePath).toLowerCase();

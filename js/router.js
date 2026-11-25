@@ -7,6 +7,8 @@ import { mountAuthPage } from './pages/auth/auth.page.js';
 import { mountCheckoutPage } from './pages/checkout/checkout.page.js';
 import { mountOrdersPage } from './pages/orders/orders.page.js';
 import { mountOrderDetailPage } from './pages/orders/order-detail.page.js';
+import { mountComplaintsPage } from './pages/complaints/complaints.page.js';
+import { mountNotFoundPage } from './pages/not-found/not-found.page.js';
 
 let currentCleanup = null;
 let onRouteChangeCallback = null;
@@ -44,7 +46,8 @@ export function navigateTo(url, options = {}) {
  */
 export async function handleCurrentRoute() {
   const activeNavigation = ++navigationId;
-  const pathname = window.location.pathname || '/';
+  const rawPath = window.location.pathname || '/';
+  const pathname = rawPath.length > 1 ? rawPath.replace(/\/+$/, '') || '/' : rawPath;
   const search = window.location.search || '';
   const hash = window.location.hash || '';
   const queryParams = new URLSearchParams(search);
@@ -85,10 +88,18 @@ export async function handleCurrentRoute() {
     const match = pathname.match(/^\/pedidos\/([^/]+)$/);
     params = { id: decodeURIComponent(match[1]) };
     route = { mount: mountOrderDetailPage, title: 'Tu pedido · La Bodega', protected: true };
+  } else if (pathname === '/libro-de-reclamaciones' || pathname === '/reclamaciones') {
+    route = {
+      mount: mountComplaintsPage,
+      title: 'Libro de Reclamaciones · La Bodega',
+      protected: false
+    };
   } else {
-    // Wildcard redirect '**' -> ''
-    window.history.replaceState({}, '', '/');
-    return await handleCurrentRoute();
+    route = {
+      mount: container => mountNotFoundPage(container, { pathname }),
+      title: 'Página no encontrada · La Bodega',
+      protected: false
+    };
   }
 
   // checkoutGuard: exige sesión válida antes de entrar a /checkout, /pedidos o /pedidos/:id
