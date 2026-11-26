@@ -69,10 +69,9 @@ export class FooterComponent {
     this.container.appendChild(this.footerElement);
   }
 
-  updateForRoute(pathname) {
+  updateForRoute() {
     if (this.footerElement) {
-      const isHome = pathname === '/';
-      this.footerElement.classList.toggle('compact', !isHome);
+      this.footerElement.classList.remove('compact');
     }
   }
 }
