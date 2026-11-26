@@ -138,6 +138,20 @@ class AuthStore {
     return await this._accept(response);
   }
 
+  /**
+   * Actualiza los datos editables del cliente autenticado (`PUT /api/auth/me`).
+   * @param {{ nombreCompleto: string, email: string, telefono: string }} values
+   */
+  async updateProfile(values) {
+    const profile = await apiFetch('/api/auth/me', {
+      method: 'PUT',
+      body: values
+    });
+    this._user = profile;
+    this._notify();
+    return profile;
+  }
+
   async _accept(response) {
     sessionState.set(response.accessToken, 'login');
     const profile = await apiFetch('/api/auth/me', { method: 'GET' });

@@ -8,6 +8,7 @@ import { mountCheckoutPage } from './pages/checkout/checkout.page.js';
 import { mountOrdersPage } from './pages/orders/orders.page.js';
 import { mountOrderDetailPage } from './pages/orders/order-detail.page.js';
 import { mountComplaintsPage } from './pages/complaints/complaints.page.js';
+import { mountProfilePage } from './pages/profile/profile.page.js';
 import { mountNotFoundPage } from './pages/not-found/not-found.page.js';
 
 let currentCleanup = null;
@@ -84,6 +85,8 @@ export async function handleCurrentRoute() {
     route = { mount: mountCheckoutPage, title: 'Revisa tu compra · La Bodega', protected: true };
   } else if (pathname === '/pedidos') {
     route = { mount: mountOrdersPage, title: 'Mis pedidos · La Bodega', protected: true };
+  } else if (pathname === '/perfil') {
+    route = { mount: mountProfilePage, title: 'Mi perfil · La Bodega', protected: true };
   } else if (/^\/pedidos\/([^/]+)$/.test(pathname)) {
     const match = pathname.match(/^\/pedidos\/([^/]+)$/);
     params = { id: decodeURIComponent(match[1]) };

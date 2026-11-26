@@ -327,6 +327,12 @@ export class HeaderComponent {
 
       this.mobileAccount.append(
         el("a", {
+          href: "/perfil",
+          dataset: { nav: "true" },
+          text: "Mi perfil",
+          onClick: () => this.setMenu(false),
+        }),
+        el("a", {
           href: "/pedidos",
           dataset: { nav: "true" },
           text: "Mis pedidos",
@@ -345,7 +351,7 @@ export class HeaderComponent {
         el(
           "a",
           {
-            href: "/pedidos",
+            href: "/perfil",
             dataset: { nav: "true" },
             className: "account-user-link",
             onClick: () => this.setMenu(false),
@@ -353,6 +359,13 @@ export class HeaderComponent {
           ICONS.user(16),
           el("span", { className: "account-name", text: userName }),
         ),
+        el("a", {
+          href: "/pedidos",
+          dataset: { nav: "true" },
+          className: "account-user-link",
+          text: "Pedidos",
+          onClick: () => this.setMenu(false),
+        }),
         el("button", {
           type: "button",
           className: "account-logout-btn",
