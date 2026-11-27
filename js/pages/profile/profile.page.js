@@ -4,6 +4,13 @@ import { authStore } from '../../core/auth.store.js';
 const PHONE_PATTERN = /^(?=(?:.*\d){7,15})[0-9+ ()-]{7,15}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function getInitials(name) {
+  const parts = String(name || 'CL').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'CL';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 /**
  * Página de Mi Perfil (`/perfil`) para que el cliente consulte y actualice sus datos.
  * @param {HTMLElement} container
@@ -14,11 +21,16 @@ export function mountProfilePage(container) {
   const user = authStore.user || {};
   let pending = false;
 
+  const avatarEl = el('div', { className: 'profile-avatar', text: getInitials(user.nombreCompleto) });
+  const summaryNameEl = el('h2', { className: 'profile-summary-name', text: user.nombreCompleto || 'Cliente' });
+  const summaryUserEl = el('p', { className: 'profile-summary-handle', text: `@${user.username || ''}` });
+
   const nombreInput = el('input', {
     id: 'perfil-nombre',
     name: 'nombreCompleto',
     type: 'text',
     value: user.nombreCompleto || '',
+    placeholder: 'Ej. María Gómez Pérez',
     required: true,
     maxLength: 100
   });
@@ -27,6 +39,7 @@ export function mountProfilePage(container) {
     name: 'email',
     type: 'email',
     value: user.email || '',
+    placeholder: 'correo@ejemplo.com',
     required: true,
     maxLength: 100
   });
@@ -35,24 +48,25 @@ export function mountProfilePage(container) {
     name: 'telefono',
     type: 'tel',
     value: user.telefono || '',
+    placeholder: 'Ej. 987654321',
     required: true,
     maxLength: 15
   });
 
-  const statusMsg = el('p', { className: 'state', role: 'status', hidden: true });
+  const statusMsg = el('p', { className: 'profile-success', role: 'status', hidden: true });
   const errorMsg = el('p', { className: 'form-error', role: 'alert', hidden: true });
   const submitBtn = el('button', { type: 'submit', className: 'button', text: 'Guardar cambios' });
 
   const form = el(
     'form',
-    { className: 'auth-form', noValidate: true },
-    el('label', { htmlFor: 'perfil-username', text: 'Usuario (no editable)' }),
+    { noValidate: true },
+    el('label', { htmlFor: 'perfil-username', text: 'Usuario (identificador único)' }),
     el('input', { id: 'perfil-username', type: 'text', value: user.username || '', disabled: true }),
     el('label', { htmlFor: 'perfil-nombre', text: 'Nombre completo' }),
     nombreInput,
     el('label', { htmlFor: 'perfil-email', text: 'Correo electrónico' }),
     emailInput,
-    el('label', { htmlFor: 'perfil-telefono', text: 'Teléfono' }),
+    el('label', { htmlFor: 'perfil-telefono', text: 'Teléfono de contacto' }),
     telefonoInput,
     errorMsg,
     statusMsg,
@@ -92,7 +106,9 @@ export function mountProfilePage(container) {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Guardando…';
     try {
-      await authStore.updateProfile({ nombreCompleto, email, telefono });
+      const updated = await authStore.updateProfile({ nombreCompleto, email, telefono });
+      avatarEl.textContent = getInitials(updated.nombreCompleto);
+      summaryNameEl.textContent = updated.nombreCompleto || nombreCompleto;
       statusMsg.textContent = 'Tus datos fueron actualizados correctamente.';
       statusMsg.hidden = false;
     } catch (err) {
@@ -105,20 +121,36 @@ export function mountProfilePage(container) {
     }
   });
 
-  const section = el(
+  const formCard = el(
     'section',
-    { className: 'container page-section' },
-    el('div', { className: 'page-heading' },
-      el('span', { className: 'eyebrow', text: 'TU CUENTA' }),
-      el('h1', { text: 'Mi perfil' }),
-      el('p', { text: 'Actualiza tu nombre, correo electrónico o teléfono de contacto.' })
-    ),
-    el('div', { className: 'panel', style: 'max-width: 560px;' },
-      form,
-      el('p', { style: 'margin-top: 16px;' },
-        el('a', { href: '/pedidos', dataset: { nav: 'true' }, text: '← Ver mis pedidos' })
-      )
+    { className: 'panel auth-panel profile-card' },
+    el('h2', { text: 'Datos personales' }),
+    el('p', { className: 'section-description', text: 'Mantén actualizada tu información para coordinar tus pedidos y recojos en tienda.' }),
+    form
+  );
+
+  const summaryCard = el(
+    'aside',
+    { className: 'panel profile-summary' },
+    avatarEl,
+    summaryNameEl,
+    summaryUserEl,
+    el('span', { className: 'status-pill', text: 'Cuenta de cliente' }),
+    el('div', { className: 'profile-links' },
+      el('a', { className: 'button button-secondary', href: '/pedidos', dataset: { nav: 'true' }, text: 'Ver mis pedidos' }),
+      el('a', { className: 'profile-back-link', href: '/productos', dataset: { nav: 'true' }, text: 'Seguir comprando →' })
     )
+  );
+
+  const section = el(
+    'div',
+    { className: 'container order-page profile-page' },
+    el('header', { className: 'page-heading' },
+      el('a', { className: 'eyebrow', href: '/', dataset: { nav: 'true' }, text: '← VOLVER AL INICIO' }),
+      el('h1', { text: 'Mi perfil' }),
+      el('p', { text: 'Consulta y actualiza tus datos de contacto de forma segura.' })
+    ),
+    el('div', { className: 'profile-layout' }, formCard, summaryCard)
   );
 
   container.appendChild(section);
